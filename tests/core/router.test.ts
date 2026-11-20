@@ -70,6 +70,22 @@ describe('Router – failover before the first token (PRD §6, §14)', () => {
     expect(h.registry.get('fa/big-400b')!.state).toBe('quota_exhausted')
   })
 
+  it.each([
+    ['404 (not offered to this account)', 404, { error: { message: 'This model is no longer available to new users.' } }, 'not_found'],
+    ['429 with a zero free quota', 429, { error: { message: 'Quota exceeded for metric: free_tier_requests, limit: 0' } }, 'no_free_quota']
+  ])('%s: out for a week, skipped on the next request, reliability untouched', async (_name, status, body, failure) => {
+    await setup()
+    const before = Date.now()
+    h.fake.script('fa', 'big-400b', { kind: 'status', status, body })
+    const r = await h.run()
+    expect(r.start!.model).toBe('fb/alpha-120b')
+    expect(r.done!.attempts[0]).toMatchObject({ model: 'fa/big-400b', outcome: 'failed', failure })
+    const m = h.registry.get('fa/big-400b')!
+    expect(m.state).toBe('cooling_down')
+    expect(m.cooldownUntil).toBeGreaterThanOrEqual(before + 6 * 24 * 3_600_000)
+    expect((await h.run()).done!.attempts[0]!.model).toBe('fb/alpha-120b')
+  })
+
   it('5xx degrades; three in a row cool the model down for 5 minutes', async () => {
     await setup()
     h.fake.script('fa', 'big-400b', { kind: 'status', status: 503 })

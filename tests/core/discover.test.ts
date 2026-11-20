@@ -37,9 +37,14 @@ describe('parseModelList', () => {
     expect(list[0]).toMatchObject({ contextWindow: 131072, maxOutput: 32768 })
   })
 
-  it('Gemini (native API): strips models/, requires generateContent, drops embeddings and TTS', () => {
+  it('Gemini (native API): strips models/, requires generateContent, drops embeddings, TTS, agents and media models', () => {
     const list = parseModelList(spec('gemini'), geminiModels)
     expect(ids(list)).toEqual(['gemini-2.5-flash'])
+    // Checked live 2026-11-20: Interactions-API-only agents and music/image generators aren't chat models.
+    for (const id of ['deep-research-max-preview-04-2026', 'antigravity-preview-latest', 'lyria-3.5', 'nano-banana-pro-preview']) {
+      const extra = { models: [{ name: `models/${id}`, supportedGenerationMethods: ['generateContent'] }] }
+      expect(parseModelList(spec('gemini'), extra)).toEqual([])
+    }
     expect(list[0]).toMatchObject({ name: 'Gemini 2.5 Flash', contextWindow: 1048576, maxOutput: 65536, reasoningFlag: true })
   })
 

@@ -11,7 +11,8 @@ export type FailureKind =
   | 'auth' // 401/403: key invalid
   | 'context' // 400/413 because the prompt is too long for this model
   | 'bad_request' // other 400/422 (unsupported parameter, …)
-  | 'not_found' // 404: model gone or renamed
+  | 'not_found' // 404: model gone, renamed, or not offered to this account
+  | 'no_free_quota' // 429 with a zero quota ("limit: 0"): the model isn't on this account's free tier
   | 'server' // 5xx / 408
   | 'timeout'
   | 'network'
@@ -25,6 +26,12 @@ export interface Failure {
 }
 
 export const DEFAULT_COOLDOWN_MS = 60_000
+/**
+ * How long a model that this account can't use (404, or a zero free quota) stays out of routing.
+ * These don't fix themselves within a day, so it's re-checked weekly instead of costing a
+ * fallback on every request. Syncs keep the cooldown.
+ */
+export const UNAVAILABLE_COOLDOWN_MS = 7 * 24 * 60 * 60_000
 
 /** Parses Groq-style durations ("2m59.56s", "7.66s", "1h2m", "250ms"). */
 export function parseDuration(s: string): number | null {
@@ -64,6 +71,8 @@ export function retryAtFromHeaders(headers: { get(name: string): string | null }
   return undefined
 }
 
+/** A quota whose limit is zero (Gemini: "Quota exceeded for metric: …free_tier…, limit: 0"). */
+const ZERO_QUOTA_RE = /\blimit["']?\s*[:=]\s*0(?![\d.])/i
 const DAILY_RE = /(per[\s_-]?day|daily|requests per day|\brpd\b|PerDay|free-models-per-day|day limit)/i
 const CONTEXT_RE = /(context|too long|maximum.{0,20}tokens|token limit|prompt is too large|reduce the length)/i
 
@@ -81,12 +90,13 @@ export function classifyHttpFailure(
   const message = body.slice(0, 300)
   const retryAt = retryAtFromHeaders(headers, now)
   if (status === 429) {
+    if (ZERO_QUOTA_RE.test(body)) return { kind: 'no_free_quota', status, retryAt: now + UNAVAILABLE_COOLDOWN_MS, message }
     if (DAILY_RE.test(body)) return { kind: 'quota_exhausted', status, retryAt: retryAt ?? nextUtcMidnight(now), message }
     return { kind: 'rate_limited', status, retryAt: retryAt ?? now + DEFAULT_COOLDOWN_MS, message }
   }
   if (status === 402) return { kind: 'payment', status, retryAt: retryAt ?? now + 60 * 60_000, message }
   if (status === 401 || status === 403) return { kind: 'auth', status, message }
-  if (status === 404) return { kind: 'not_found', status, message }
+  if (status === 404) return { kind: 'not_found', status, retryAt: now + UNAVAILABLE_COOLDOWN_MS, message }
   if (status === 400 || status === 413 || status === 422) {
     return { kind: CONTEXT_RE.test(body) || status === 413 ? 'context' : 'bad_request', status, message }
   }
@@ -102,10 +112,12 @@ export function stateForFailure(f: Failure): { state?: ModelState; cooldownUntil
     case 'quota_exhausted':
     case 'payment':
       return { state: 'quota_exhausted', cooldownUntil: f.retryAt ?? null }
+    case 'not_found':
+    case 'no_free_quota':
+      return { state: 'cooling_down', cooldownUntil: f.retryAt ?? null }
     case 'server':
     case 'timeout':
     case 'network':
-    case 'not_found':
       return { state: 'degraded' }
     default:
       // auth is a key problem; context/bad_request are request problems – the model itself is fine.

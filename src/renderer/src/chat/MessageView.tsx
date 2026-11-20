@@ -13,7 +13,8 @@ const FAILURE_LABEL: Record<string, string> = {
   auth: 'key rejected',
   context: 'context too long',
   bad_request: 'bad request',
-  not_found: 'model gone',
+  not_found: 'not available',
+  no_free_quota: 'not on free tier',
   server: 'server error',
   timeout: 'timeout',
   network: 'network'

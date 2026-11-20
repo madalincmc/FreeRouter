@@ -425,8 +425,7 @@ export class Router {
         return
       case 'server':
       case 'timeout':
-      case 'network':
-      case 'not_found': {
+      case 'network': {
         this.d.health.record(c.model.id, false)
         const streak = this.d.health.serverFailure(c.model.id)
         if (streak >= this.cfg.degradedStreak) {
@@ -441,7 +440,8 @@ export class Router {
         return
       }
       default:
-        // Rate limits and quotas: cooldown until the reset, not counted against reliability.
+        // Rate limits, quotas and models this account can't use (404 / zero free quota):
+        // cooldown until the reset, not counted against reliability.
         this.d.recordModelOutcome(c.model.id, { ...stateForFailure(f), error })
     }
   }

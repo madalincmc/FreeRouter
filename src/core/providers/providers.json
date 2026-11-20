@@ -158,7 +158,11 @@
           "native-audio",
           "learnlm",
           "robotics",
-          "computer-use"
+          "computer-use",
+          "deep-research",
+          "antigravity",
+          "lyria",
+          "nano-banana"
         ]
       },
       "request": {
@@ -286,7 +290,7 @@
         "url": "https://integrate.api.nvidia.com/v1/chat/completions",
         "method": "POST",
         "body": {
-          "model": "google/gemma-4-31b-it",
+          "model": "nvidia/nemotron-3.5-bolt-e4b",
           "messages": [
             {
               "role": "user",
