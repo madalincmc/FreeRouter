@@ -67,7 +67,8 @@ export function fakeFetch(routes: Record<string, Route>): FetchLike & { calls: F
       status: r.status,
       ok: r.status >= 200 && r.status < 300,
       headers: { get: (name: string) => headers.get(name.toLowerCase()) ?? null },
-      text: async () => text
+      text: async () => text,
+      body: new Response(text).body
     }
   }) as FetchLike & { calls: FakeCall[] }
   fn.calls = calls

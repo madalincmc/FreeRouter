@@ -27,6 +27,7 @@ interface ModelRow {
   last_error: string | null
   latency_samples_json: string
   last_tested_at: number | null
+  meta_json: string
   first_seen: number
   last_seen: number
   missed_syncs: number
@@ -272,6 +273,7 @@ export class ModelRegistry {
   private toView(r: ModelRow): ModelView {
     const base = parseJson<Quality>(r.quality_json, {})
     const overrides = parseJson<Quality>(r.quality_override_json, {})
+    const meta = parseJson<{ supportedParameters?: string[]; inputModalities?: string[] }>(r.meta_json, {})
     const now = this.now()
     return {
       id: r.id,
@@ -286,6 +288,8 @@ export class ModelRegistry {
       qualityOverridden: QUALITY_PROFILES.filter((p) => overrides[p] !== undefined),
       contextWindow: r.context_window,
       maxOutput: r.max_output,
+      supportedParameters: meta.supportedParameters ?? [],
+      inputModalities: meta.inputModalities ?? [],
       // An expired cooldown reads as healthy again; the router re-evaluates on the next call.
       state:
         (r.state === 'cooling_down' || r.state === 'quota_exhausted') && r.cooldown_until !== null && r.cooldown_until <= now

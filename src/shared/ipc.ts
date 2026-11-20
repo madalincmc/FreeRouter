@@ -103,6 +103,9 @@ export interface ModelView {
   qualityOverridden: QualityProfile[]
   contextWindow: number | null
   maxOutput: number | null
+  /** From the provider's list where available (OpenRouter); empty means unknown. */
+  supportedParameters: string[]
+  inputModalities: string[]
   state: ModelState
   cooldownUntil: number | null
   lastError: string | null
@@ -162,6 +165,8 @@ export interface IpcContract {
   /** `null` for a profile clears the override. */
   'models:setQuality': { args: [modelId: string, quality: Partial<Record<QualityProfile, number | null>>]; result: ModelView }
   'models:test': { args: [modelId: string]; result: ModelTestResult }
+  /** Requests sent today: per model, and per provider for account-wide limits (OpenRouter). */
+  'models:usageToday': { args: []; result: { perModel: Record<string, number>; perProvider: Record<string, number> } }
 }
 
 export type IpcChannel = keyof IpcContract
@@ -199,7 +204,8 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'models:sync',
   'models:setEnabled',
   'models:setQuality',
-  'models:test'
+  'models:test',
+  'models:usageToday'
 ] as const
 
 export const IPC_EVENTS: readonly IpcEvent[] = ['gateway:statusChanged', 'models:changed'] as const

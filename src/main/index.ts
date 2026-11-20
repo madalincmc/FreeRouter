@@ -8,6 +8,11 @@ import type { FetchLike } from '@core/http'
 import { countRoutable } from '@core/registry/routable'
 import { ModelRegistry } from '@core/registry/store'
 import { RegistryService, SYNC_INTERVAL_MS } from '@core/registry/sync'
+import { ChainStore } from '@core/routing/chains'
+import { HealthTracker } from '@core/routing/health'
+import { RequestLog } from '@core/routing/log'
+import { QuotaTracker } from '@core/routing/quota'
+import { Router } from '@core/routing/router'
 import { redactError } from '@core/security/redact'
 import type { GatewayStatus, ProviderView, ThemePreference } from '@shared/ipc'
 import { openDatabase, SettingsStore, type Db } from './db'
@@ -105,6 +110,29 @@ if (!app.requestSingleInstanceLock()) {
       tray?.refresh()
       emit(mainWindow?.webContents, 'models:changed', { reason })
     }
+    // ---- Router (M3) – consumed by the chat UI (M4) and the gateway (M5) ----
+    const quota = new QuotaTracker(db)
+    const requestLog = new RequestLog(db)
+    const chains = new ChainStore(db)
+    const router = new Router({
+      snapshot: () => ({ models: registry.list(), providers: listProviders() }),
+      profile: (id) => providers.profile(id),
+      revealKey: (id) => vault.reveal(id),
+      markKeyInvalid: (id) => vault.setStatus(id, 'invalid'),
+      recordModelOutcome: (id, outcome) => {
+        registry.recordOutcome(id, outcome)
+        modelsChanged('test')
+      },
+      chains: (name) => chains.get(name),
+      log: (e) => requestLog.write(e),
+      quota,
+      health: new HealthTracker(),
+      fetch: httpFetch
+    })
+    void router // wired into chat (M4) and the gateway (M5)
+    // Metadata-only request log, kept 7 days by default (PRD §10).
+    requestLog.prune(Date.now() - settings.get('log.retentionDays', 7) * 24 * 3600_000)
+
     const runSync = async (providerId?: string) => {
       const results = await registryService.sync(providerId)
       for (const r of results) if (r.outcome === 'error') console.warn(`[registry] ${r.providerId}: ${r.message}`)
@@ -154,6 +182,10 @@ if (!app.requestSingleInstanceLock()) {
       return m
     })
     handle('models:setQuality', isTrustedSender, (id, quality) => registry.setQualityOverride(id, quality))
+    handle('models:usageToday', isTrustedSender, () => {
+      const keyProvider = new Map(vault.list().map((k) => [k.id, k.providerId]))
+      return quota.todayByModel((keyId) => keyProvider.get(keyId))
+    })
     handle('models:test', isTrustedSender, async (id) => {
       const r = await registryService.testModel(id)
       modelsChanged('test')

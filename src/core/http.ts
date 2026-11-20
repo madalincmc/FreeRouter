@@ -7,6 +7,8 @@ export interface HttpResponse {
   ok: boolean
   headers: { get(name: string): string | null }
   text(): Promise<string>
+  /** Streaming body (SSE). Consume either `body` or `text()`, not both. */
+  body: ReadableStream<Uint8Array> | null
 }
 
 export interface HttpRequestInit {

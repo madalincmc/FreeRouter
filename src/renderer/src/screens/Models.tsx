@@ -48,6 +48,7 @@ export function ModelsScreen() {
   const { data: models = [], isLoading } = useIpcQuery('models:list')
   const { data: providers = [] } = useIpcQuery('providers:list')
   const { data: syncStatus = [] } = useIpcQuery('models:syncStatus')
+  const { data: usage } = useIpcQuery('models:usageToday')
   const [filters, setFilters] = useState<Filters>({
     freeOnly: true,
     coding: false,
@@ -64,6 +65,7 @@ export function ModelsScreen() {
     void qc.invalidateQueries({ queryKey: ['models:list'] })
     void qc.invalidateQueries({ queryKey: ['models:syncStatus'] })
     void qc.invalidateQueries({ queryKey: ['providers:list'] })
+    void qc.invalidateQueries({ queryKey: ['models:usageToday'] })
   }, [qc])
   useIpcEvent('models:changed', refresh)
 
@@ -186,6 +188,11 @@ export function ModelsScreen() {
                 key={m.id}
                 m={m}
                 provider={providerById.get(m.providerId)}
+                usedToday={
+                  providerById.get(m.providerId)?.limitScope === 'account'
+                    ? (usage?.perProvider[m.providerId] ?? 0)
+                    : (usage?.perModel[m.id] ?? 0)
+                }
                 expanded={expanded === m.id}
                 onToggleExpand={() => setExpanded((e) => (e === m.id ? null : m.id))}
               />
@@ -266,11 +273,13 @@ function SyncBar(props: {
 function ModelRow({
   m,
   provider,
+  usedToday,
   expanded,
   onToggleExpand
 }: {
   m: ModelView
   provider: ProviderView | undefined
+  usedToday: number
   expanded: boolean
   onToggleExpand: () => void
 }) {
@@ -332,8 +341,15 @@ function ModelRow({
           {m.qualityOverridden.length > 0 && <span className="text-accent" title="Edited by you">*</span>}
         </td>
         <td className="py-2 pr-2 text-right align-top font-mono text-xs">{m.p50LatencyMs !== null ? `${m.p50LatencyMs} ms` : '—'}</td>
-        <td className="py-2 pr-2 text-right align-top font-mono text-xs text-muted" title="Usage counting arrives with the router (M3)">
-          — / {rpd ? compactNumber(rpd) : '?'}
+        <td
+          className={`py-2 pr-2 text-right align-top font-mono text-xs ${rpd && usedToday >= rpd ? 'text-err' : 'text-muted'}`}
+          title={
+            provider?.limitScope === 'account'
+              ? 'Requests today across all models of this provider (shared account limit)'
+              : 'Requests today / provider daily limit'
+          }
+        >
+          {usedToday} / {rpd ? compactNumber(rpd) : '?'}
         </td>
         <td className="py-2 pr-3 align-top">
           <div className="flex items-center justify-end gap-2">

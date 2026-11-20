@@ -52,7 +52,8 @@ export const argSchemas: { [C in IpcChannel]: z.ZodType<IpcContract[C]['args']> 
       })
       .strict()
   ]),
-  'models:test': z.tuple([modelId])
+  'models:test': z.tuple([modelId]),
+  'models:usageToday': z.tuple([])
 }
 
 export function handle<C extends IpcChannel>(
