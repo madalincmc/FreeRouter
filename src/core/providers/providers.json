@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "limitsNote": "Seed values from the PRD (Nov 2026). Free-tier limits change often: rate-limit headers override them at runtime and users can override them in Settings.",
   "providers": [
     {
@@ -263,6 +263,73 @@
           "logprobs",
           "top_logprobs",
           "user"
+        ]
+      }
+    },
+    {
+      "id": "nvidia",
+      "name": "NVIDIA NIM (build.nvidia.com)",
+      "baseUrl": "https://integrate.api.nvidia.com/v1",
+      "keyUrl": "https://build.nvidia.com/settings/api-keys",
+      "docsUrl": "https://docs.api.nvidia.com/nim/",
+      "keyPrefix": "nvapi-",
+      "mayTrainOnData": true,
+      "limitScope": "account",
+      "keyRotation": false,
+      "limits": {
+        "rpm": 40
+      },
+      "notes": "Free developer tier for prototyping, around 40 requests/min per account (community-reported; no increases on free accounts). The model list is public; keys are checked with a 1-token chat call. Data-use terms unverified, so treated as may-train.",
+      "validation": {
+        "url": "https://integrate.api.nvidia.com/v1/chat/completions",
+        "method": "POST",
+        "body": {
+          "model": "google/gemma-4-31b-it",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "max_tokens": 1
+        },
+        "invalidStatuses": [
+          401,
+          403
+        ]
+      },
+      "models": {
+        "url": "https://integrate.api.nvidia.com/v1/models",
+        "auth": "none",
+        "listPath": "data",
+        "fields": {
+          "id": "id",
+          "contextWindow": "context_window",
+          "toolsFlag": "supports_tools",
+          "reasoningFlag": "supports_thinking"
+        },
+        "free": {
+          "all": true
+        },
+        "exclude": [
+          "embed",
+          "retriever",
+          "nemoguard",
+          "safety",
+          "guard",
+          "gliner",
+          "nvclip",
+          "video-detector",
+          "calibration",
+          "riva-translate",
+          "starcoder"
+        ]
+      },
+      "request": {
+        "stripParams": [
+          "logit_bias",
+          "logprobs",
+          "top_logprobs"
         ]
       }
     }

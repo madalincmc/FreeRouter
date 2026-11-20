@@ -27,6 +27,27 @@ describe('testKey', () => {
     expect(fetch.calls[0]!.headers['User-Agent']).toBe('FreeRouter-Desktop')
   })
 
+  it('validates NVIDIA keys with a 1-token chat POST (its /models is public)', async () => {
+    const url = 'https://integrate.api.nvidia.com/v1/chat/completions'
+    const fetch = fakeFetch({ [url]: (h) => (h['Authorization'] === 'Bearer nvapi-good0123456789' ? { status: 200 } : { status: 403, body: { status: 403, title: 'Forbidden', detail: 'Authorization failed' } }) })
+    expect(await testKey(profile('nvidia'), 'nvapi-good0123456789', { fetch })).toMatchObject({ outcome: 'valid' })
+    expect(await testKey(profile('nvidia'), 'nvapi-bad00123456789', { fetch })).toMatchObject({
+      outcome: 'invalid',
+      httpStatus: 403,
+      message: 'Authorization failed'
+    })
+    const call = fetch.calls[0]!
+    expect(call.method).toBe('POST')
+    expect(call.headers['Content-Type']).toBe('application/json')
+    expect(call.body).toMatchObject({ max_tokens: 1, messages: [{ role: 'user', content: 'hi' }] })
+  })
+
+  it('a retired validation model (410) leaves the key untested rather than rejected', async () => {
+    const url = 'https://integrate.api.nvidia.com/v1/chat/completions'
+    const fetch = fakeFetch({ [url]: { status: 410, body: { status: 410, title: 'Gone', detail: 'end of life' } } })
+    expect((await testKey(profile('nvidia'), 'nvapi-good0123456789', { fetch })).outcome).toBe('error')
+  })
+
   it.each([401, 403])('treats %i as an invalid key', async (status) => {
     const fetch = fakeFetch({
       'https://api.groq.com/openai/v1/models': { status, body: { error: { message: 'Invalid API Key' } } }

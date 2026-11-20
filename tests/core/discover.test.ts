@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { bundledCatalog } from '@core/providers/catalog'
 import { modelsHeaders, modelsUrl, parseModelList } from '@core/registry/discover'
-import { cerebrasModels, geminiModels, groqModels, mistralModels, openrouterModels } from '../fixtures/models'
+import { cerebrasModels, geminiModels, groqModels, mistralModels, nvidiaModels, openrouterModels } from '../fixtures/models'
 
 const spec = (id: string) => bundledCatalog.providers.find((p) => p.id === id)!.models
 const ids = (list: { modelId: string }[]) => list.map((m) => m.modelId)
@@ -53,6 +53,16 @@ describe('parseModelList', () => {
     const list = parseModelList(spec('mistral'), mistralModels)
     expect(ids(list)).toEqual(['mistral-large-latest', 'codestral-latest'])
     expect(list[0]).toMatchObject({ toolsFlag: true, visionFlag: false, contextWindow: 131072 })
+  })
+
+  it('NVIDIA: public list; drops embeddings, guards, safety, detectors and base code models', () => {
+    const list = parseModelList(spec('nvidia'), nvidiaModels)
+    expect(ids(list)).toEqual(['google/gemma-4-31b-it', 'moonshotai/kimi-k3.1-pro', 'nvidia/nemotron-3-ultra-550b-a55b', 'z-ai/glm-5.3-flash'])
+    expect(list.every((m) => m.isFree)).toBe(true)
+    expect(list[1]).toMatchObject({ contextWindow: 1048576, toolsFlag: true, reasoningFlag: true })
+    // Most entries carry no metadata: unknown, not "no tools".
+    expect(list[0]).toMatchObject({ contextWindow: null, toolsFlag: null })
+    expect(modelsHeaders(spec('nvidia'), 'nvapi-x')['Authorization']).toBeUndefined()
   })
 
   it('throws on an unexpected shape instead of returning nothing', () => {

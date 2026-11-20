@@ -17,9 +17,12 @@ export function errorMessage(body: string): string {
   try {
     let parsed: unknown = JSON.parse(body)
     if (Array.isArray(parsed)) parsed = parsed[0] // Gemini wraps errors in an array
-    const json = (parsed ?? {}) as { error?: { message?: unknown } | string; message?: unknown }
+    const json = (parsed ?? {}) as { error?: { message?: unknown } | string; message?: unknown; detail?: unknown; title?: unknown }
     const candidate =
-      typeof json.error === 'string' ? json.error : (json.error?.message ?? json.message)
+      typeof json.error === 'string'
+        ? json.error
+        : // RFC 7807 problem+json (NVIDIA) uses detail/title.
+          (json.error?.message ?? json.message ?? json.detail ?? json.title)
     if (typeof candidate === 'string') msg = candidate
   } catch {
     /* not JSON – use the raw text */
@@ -35,15 +38,21 @@ export function errorMessage(body: string): string {
 export async function testKey(profile: ProviderProfile, key: string, opts: TestKeyOptions): Promise<KeyTestResult> {
   const now = opts.now ?? Date.now
   const started = now()
-  const { url, invalidStatuses, headers } = profile.validation
+  const { url, invalidStatuses, headers, method = 'GET', body: requestBody } = profile.validation
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 10_000)
   const done = (r: Omit<KeyTestResult, 'latencyMs'>): KeyTestResult => ({ ...r, latencyMs: now() - started })
 
   try {
     const res = await opts.fetch(url, {
-      method: 'GET',
-      headers: { Accept: 'application/json', ...headers, Authorization: `Bearer ${key}` },
+      method,
+      headers: {
+        Accept: 'application/json',
+        ...(requestBody ? { 'Content-Type': 'application/json' } : {}),
+        ...headers,
+        Authorization: `Bearer ${key}`
+      },
+      ...(requestBody ? { body: JSON.stringify(requestBody) } : {}),
       signal: controller.signal
     })
     if (res.ok) return done({ outcome: 'valid', httpStatus: res.status, message: 'Key accepted' })

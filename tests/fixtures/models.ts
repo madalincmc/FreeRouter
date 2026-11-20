@@ -103,6 +103,37 @@ export const cerebrasModels = {
   ]
 }
 
+/** Sampled from https://integrate.api.nvidia.com/v1/models on 2026-11-20 (public, no key). */
+export const nvidiaModels = {
+  object: 'list',
+  data: [
+    { id: 'bigcode/starcoder2-15b', object: 'model', created: 735790403, owned_by: 'bigcode' },
+    { id: 'fastino/gliner2-pii', object: 'model', created: 735790403, owned_by: 'fastino' },
+    { id: 'google/gemma-4-31b-it', object: 'model', created: 735790403, owned_by: 'google' },
+    {
+      id: 'moonshotai/kimi-k3.1-pro',
+      object: 'model',
+      created: 735790403,
+      owned_by: 'moonshotai',
+      model_type: 'vlm',
+      context_window: 1048576,
+      supports_tools: true,
+      supports_thinking: true,
+      supports_structured_output: true
+    },
+    { id: 'nvidia/ai-synthetic-video-detector', object: 'model', created: 735790403, owned_by: 'nvidia' },
+    { id: 'nvidia/embed-qa-4', object: 'model', created: 735790403, owned_by: 'nvidia' },
+    { id: 'nvidia/llama-3.1-nemoguard-8b-topic-control', object: 'model', created: 735790403, owned_by: 'nvidia' },
+    { id: 'nvidia/llama-3.1-nemotron-safety-guard-8b-v3', object: 'model', created: 735790403, owned_by: 'nvidia' },
+    { id: 'nvidia/llama-3.2-nemoretriever-1b-vlm-embed-v1', object: 'model', created: 735790403, owned_by: 'nvidia' },
+    { id: 'nvidia/nemotron-3-ultra-550b-a55b', object: 'model', created: 735790403, owned_by: 'nvidia' },
+    { id: 'nvidia/nemotron-3.5-content-safety', object: 'model', created: 735790403, owned_by: 'nvidia' },
+    { id: 'nvidia/nvclip', object: 'model', created: 735790403, owned_by: 'nvidia' },
+    { id: 'nvidia/riva-translate-4b-instruct-v2', object: 'model', created: 735790403, owned_by: 'nvidia' },
+    { id: 'z-ai/glm-5.3-flash', object: 'model', created: 735790403, owned_by: 'z-ai' }
+  ]
+}
+
 export const mistralModels = {
   object: 'list',
   data: [

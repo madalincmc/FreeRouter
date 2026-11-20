@@ -85,7 +85,10 @@ export const ProviderProfileSchema = z
         url: z.url(),
         /** HTTP statuses that mean "this key is invalid" (Gemini answers 400 for a bad key). */
         invalidStatuses: z.array(z.number().int()).min(1),
-        headers: z.record(z.string(), z.string()).optional()
+        headers: z.record(z.string(), z.string()).optional(),
+        /** POST with a JSON body for providers with no authenticated GET (NVIDIA: a 1-token chat call). */
+        method: z.enum(['GET', 'POST']).optional(),
+        body: z.record(z.string(), z.unknown()).optional()
       })
       .strict(),
     models: ModelsSpecSchema,

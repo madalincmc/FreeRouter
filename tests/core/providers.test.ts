@@ -4,8 +4,13 @@ import { cleanLimits, effectiveLimits, ProviderStore } from '@core/providers/sto
 import { memoryDb } from '../helpers'
 
 describe('provider catalog', () => {
-  it('contains the MVP providers (GitHub Models was retired on 2026-07-30)', () => {
-    expect(bundledCatalog.providers.map((p) => p.id)).toEqual(['openrouter', 'groq', 'gemini', 'cerebras', 'mistral'])
+  it('contains the MVP providers (NVIDIA NIM replaces GitHub Models, retired 2026-07-30)', () => {
+    expect(bundledCatalog.providers.map((p) => p.id)).toEqual(['openrouter', 'groq', 'gemini', 'cerebras', 'mistral', 'nvidia'])
+  })
+
+  it('NVIDIA limits are account-wide at 40 RPM with no key rotation', () => {
+    const nv = bundledCatalog.providers.find((p) => p.id === 'nvidia')!
+    expect(nv).toMatchObject({ limitScope: 'account', keyRotation: false, limits: { rpm: 40 }, keyPrefix: 'nvapi-' })
   })
 
   it('uses https everywhere', () => {
@@ -32,7 +37,7 @@ describe('ProviderStore', () => {
     const store = new ProviderStore(db, bundledCatalog)
     store.seed()
     const list = store.list(() => [])
-    expect(list).toHaveLength(5)
+    expect(list).toHaveLength(6)
     expect(list.every((p) => p.enabled && Object.keys(p.limitOverrides).length === 0)).toBe(true)
     expect(db.prepare("SELECT may_train_on_data AS t FROM providers WHERE id = 'gemini'").get()).toEqual({ t: 1 })
   })
