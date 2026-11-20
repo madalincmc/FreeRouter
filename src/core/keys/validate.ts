@@ -1,12 +1,9 @@
 import type { KeyTestResult } from '@shared/ipc'
+import type { FetchLike } from '../http'
 import type { ProviderProfile } from '../providers/catalog'
 import { redact } from '../security/redact'
 
-export type FetchLike = (url: string, init: { method: string; headers: Record<string, string>; signal: AbortSignal }) => Promise<{
-  status: number
-  ok: boolean
-  text(): Promise<string>
-}>
+export type { FetchLike }
 
 export interface TestKeyOptions {
   fetch: FetchLike
@@ -15,10 +12,12 @@ export interface TestKeyOptions {
 }
 
 /** Pulls a human-readable message out of an error body, redacted and capped. */
-function errorMessage(body: string): string {
+export function errorMessage(body: string): string {
   let msg = body
   try {
-    const json = JSON.parse(body) as { error?: { message?: unknown } | string; message?: unknown }
+    let parsed: unknown = JSON.parse(body)
+    if (Array.isArray(parsed)) parsed = parsed[0] // Gemini wraps errors in an array
+    const json = (parsed ?? {}) as { error?: { message?: unknown } | string; message?: unknown }
     const candidate =
       typeof json.error === 'string' ? json.error : (json.error?.message ?? json.message)
     if (typeof candidate === 'string') msg = candidate

@@ -10,6 +10,9 @@ type Handler<C extends IpcChannel> = (
 const id = z.string().min(1).max(64)
 const limitValue = z.number().int().min(0).max(1_000_000_000).optional()
 const limits = z.object({ rpm: limitValue, rpd: limitValue, tpm: limitValue, tpd: limitValue }).strict()
+/** Registry ids are `<provider>/<model_id>`; model ids can contain slashes and colons. */
+const modelId = z.string().min(3).max(256)
+const qualityValue = z.number().int().min(0).max(100).nullable().optional()
 
 /** Every channel's arguments are validated with Zod before the handler runs. */
 export const argSchemas: { [C in IpcChannel]: z.ZodType<IpcContract[C]['args']> } = {
@@ -33,7 +36,23 @@ export const argSchemas: { [C in IpcChannel]: z.ZodType<IpcContract[C]['args']> 
   ]),
   'keys:test': z.tuple([id]),
   'keys:setEnabled': z.tuple([id, z.boolean()]),
-  'keys:delete': z.tuple([id])
+  'keys:delete': z.tuple([id]),
+  'models:list': z.tuple([]),
+  'models:syncStatus': z.tuple([]),
+  'models:sync': z.union([z.tuple([]), z.tuple([id]), z.tuple([z.undefined()])]),
+  'models:setEnabled': z.tuple([modelId, z.boolean()]),
+  'models:setQuality': z.tuple([
+    modelId,
+    z
+      .object({
+        general: qualityValue,
+        coding: qualityValue,
+        reasoning: qualityValue,
+        tools: qualityValue
+      })
+      .strict()
+  ]),
+  'models:test': z.tuple([modelId])
 }
 
 export function handle<C extends IpcChannel>(

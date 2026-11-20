@@ -9,7 +9,7 @@ const GROQ_URL = 'https://api.groq.com/openai/v1/models'
 const GOOD = 'gsk_good0123456789abcdef'
 const BAD = 'gsk_bad00123456789abcdef'
 
-function setup(groq: FakeResponse | Error | ((h: Record<string, string>) => FakeResponse)) {
+function setup(groq: FakeResponse | Error | ((h: Record<string, string>, body: unknown) => FakeResponse)) {
   const db = memoryDb()
   const providers = new ProviderStore(db, bundledCatalog)
   providers.seed()

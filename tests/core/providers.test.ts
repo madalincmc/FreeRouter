@@ -4,15 +4,8 @@ import { cleanLimits, effectiveLimits, ProviderStore } from '@core/providers/sto
 import { memoryDb } from '../helpers'
 
 describe('provider catalog', () => {
-  it('contains exactly the six MVP providers', () => {
-    expect(bundledCatalog.providers.map((p) => p.id)).toEqual([
-      'openrouter',
-      'groq',
-      'gemini',
-      'cerebras',
-      'mistral',
-      'github'
-    ])
+  it('contains the MVP providers (GitHub Models was retired on 2026-07-30)', () => {
+    expect(bundledCatalog.providers.map((p) => p.id)).toEqual(['openrouter', 'groq', 'gemini', 'cerebras', 'mistral'])
   })
 
   it('uses https everywhere', () => {
@@ -39,7 +32,7 @@ describe('ProviderStore', () => {
     const store = new ProviderStore(db, bundledCatalog)
     store.seed()
     const list = store.list(() => [])
-    expect(list).toHaveLength(6)
+    expect(list).toHaveLength(5)
     expect(list.every((p) => p.enabled && Object.keys(p.limitOverrides).length === 0)).toBe(true)
     expect(db.prepare("SELECT may_train_on_data AS t FROM providers WHERE id = 'gemini'").get()).toEqual({ t: 1 })
   })

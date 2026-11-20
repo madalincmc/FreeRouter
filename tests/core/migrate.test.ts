@@ -23,6 +23,7 @@ describe('migrate', () => {
       'messages',
       'models',
       'providers',
+      'registry_sync',
       'request_log',
       'settings',
       'usage_counters'

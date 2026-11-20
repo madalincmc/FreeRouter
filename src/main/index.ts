@@ -4,6 +4,10 @@ import { KeyService } from '@core/keys/service'
 import { KeyVault } from '@core/keys/vault'
 import { bundledCatalog } from '@core/providers/catalog'
 import { ProviderStore } from '@core/providers/store'
+import type { FetchLike } from '@core/http'
+import { countRoutable } from '@core/registry/routable'
+import { ModelRegistry } from '@core/registry/store'
+import { RegistryService, SYNC_INTERVAL_MS } from '@core/registry/sync'
 import { redactError } from '@core/security/redact'
 import type { GatewayStatus, ProviderView, ThemePreference } from '@shared/ipc'
 import { openDatabase, SettingsStore, type Db } from './db'
@@ -90,8 +94,23 @@ if (!app.requestSingleInstanceLock()) {
     const providers = new ProviderStore(db, bundledCatalog)
     providers.seed()
     const vault = new KeyVault(db, safeStorageEncryptor)
-    const keys = new KeyService(vault, providers, { fetch: (url, init) => fetch(url, init), timeoutMs: 10_000 })
+    const httpFetch: FetchLike = (url, init) => fetch(url, init)
+    const keys = new KeyService(vault, providers, { fetch: httpFetch, timeoutMs: 10_000 })
     const listProviders = (): ProviderView[] => providers.list((id) => vault.list(id))
+
+    // ---- Model registry (M2) ----
+    const registry = new ModelRegistry(db)
+    const registryService = new RegistryService({ registry, providers, vault, fetch: httpFetch })
+    const modelsChanged = (reason: 'sync' | 'test' | 'edit'): void => {
+      tray?.refresh()
+      emit(mainWindow?.webContents, 'models:changed', { reason })
+    }
+    const runSync = async (providerId?: string) => {
+      const results = await registryService.sync(providerId)
+      for (const r of results) if (r.outcome === 'error') console.warn(`[registry] ${r.providerId}: ${r.message}`)
+      modelsChanged('sync')
+      return results
+    }
 
     handle('app:getInfo', isTrustedSender, async () => ({
       name: app.getName(),
@@ -111,7 +130,12 @@ if (!app.requestSingleInstanceLock()) {
       providers.setLimitOverrides(id, overrides)
       return listProviders()
     })
-    handle('keys:add', isTrustedSender, (input) => keys.add(input))
+    handle('keys:add', isTrustedSender, async (input) => {
+      const result = await keys.add(input)
+      // A new key may unlock a provider's model list: sync it in the background.
+      if (result.saved) void runSync(input.providerId)
+      return result
+    })
     handle('keys:test', isTrustedSender, (keyId) => keys.test(keyId))
     handle('keys:setEnabled', isTrustedSender, (keyId, enabled) => {
       vault.setEnabled(keyId, enabled)
@@ -120,6 +144,20 @@ if (!app.requestSingleInstanceLock()) {
     handle('keys:delete', isTrustedSender, (keyId) => {
       vault.delete(keyId)
       return listProviders()
+    })
+    handle('models:list', isTrustedSender, () => registry.list())
+    handle('models:syncStatus', isTrustedSender, () => registry.syncStatus(listProviders().map((p) => p.id)))
+    handle('models:sync', isTrustedSender, (providerId) => runSync(providerId))
+    handle('models:setEnabled', isTrustedSender, (id, enabled) => {
+      const m = registry.setEnabled(id, enabled)
+      modelsChanged('edit')
+      return m
+    })
+    handle('models:setQuality', isTrustedSender, (id, quality) => registry.setQualityOverride(id, quality))
+    handle('models:test', isTrustedSender, async (id) => {
+      const r = await registryService.testModel(id)
+      modelsChanged('test')
+      return r
     })
     handle('gateway:getStatus', isTrustedSender, gatewayStatus)
     handle('gateway:setEnabled', isTrustedSender, setGatewayEnabled)
@@ -134,10 +172,14 @@ if (!app.requestSingleInstanceLock()) {
       toggleGateway: () => setGatewayEnabled(!gatewayStatus().enabled),
       quit: () => app.quit(),
       gatewayStatus,
-      healthyModelCount: () => 0 // registry arrives in M2
+      healthyModelCount: () => countRoutable(registry.list(), listProviders())
     })
 
     showWindow()
+
+    // Sync at startup (cached registry is served meanwhile), then every 6 hours (PRD §5).
+    void runSync()
+    setInterval(() => void runSync(), SYNC_INTERVAL_MS).unref()
   })
 
   // Tray app: stay alive when all windows are closed.

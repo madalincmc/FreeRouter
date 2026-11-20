@@ -19,9 +19,10 @@ describe('testKey', () => {
     expect((await testKey(profile('openrouter'), 'sk-or-v1-abc12345678', { fetch })).outcome).toBe('valid')
   })
 
-  it('validates GitHub PATs against api.github.com with the required headers', async () => {
-    const fetch = fakeFetch({ 'https://api.github.com/user': { status: 401, body: { message: 'Bad credentials' } } })
-    const r = await testKey(profile('github'), 'github_pat_abcdefgh12345678', { fetch })
+  it('sends profile-specific validation headers', async () => {
+    const custom = { ...profile('groq'), validation: { ...profile('groq').validation, headers: { 'User-Agent': 'FreeRouter-Desktop' } } }
+    const fetch = fakeFetch({ 'https://api.groq.com/openai/v1/models': { status: 401, body: { message: 'Bad credentials' } } })
+    const r = await testKey(custom, KEY, { fetch })
     expect(r).toMatchObject({ outcome: 'invalid', httpStatus: 401, message: 'Bad credentials' })
     expect(fetch.calls[0]!.headers['User-Agent']).toBe('FreeRouter-Desktop')
   })

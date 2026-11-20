@@ -80,6 +80,64 @@ export interface ProviderView {
   keys: KeyView[]
 }
 
+// ---- Model registry ------------------------------------------------------
+
+export type CapabilityTag = 'coding' | 'reasoning' | 'tools' | 'vision' | 'long_context' | 'fast'
+export type QualityProfile = 'general' | 'coding' | 'reasoning' | 'tools'
+export type Quality = Partial<Record<QualityProfile, number>>
+export type ModelState = 'healthy' | 'degraded' | 'cooling_down' | 'quota_exhausted' | 'gone'
+
+export interface ModelView {
+  /** `<provider>/<model_id>` */
+  id: string
+  providerId: string
+  modelId: string
+  displayName: string
+  isFree: boolean
+  isNew: boolean
+  enabled: boolean
+  tags: CapabilityTag[]
+  /** Effective scores (seed/heuristic merged with user overrides). */
+  quality: Quality
+  /** Which profiles the user has overridden. */
+  qualityOverridden: QualityProfile[]
+  contextWindow: number | null
+  maxOutput: number | null
+  state: ModelState
+  cooldownUntil: number | null
+  lastError: string | null
+  p50LatencyMs: number | null
+  lastTestedAt: number | null
+  firstSeen: number
+  lastSeen: number
+}
+
+export interface ProviderSyncStatus {
+  providerId: string
+  lastAttemptAt: number | null
+  lastSuccessAt: number | null
+  lastError: string | null
+  modelCount: number
+  freeCount: number
+}
+
+export interface SyncResult {
+  providerId: string
+  outcome: 'ok' | 'skipped' | 'error'
+  message: string
+  added: number
+  gone: number
+  total: number
+}
+
+export interface ModelTestResult {
+  ok: boolean
+  latencyMs: number
+  httpStatus?: number
+  message: string
+  model: ModelView
+}
+
 // ---- Channels ------------------------------------------------------------
 
 export interface IpcContract {
@@ -96,6 +154,14 @@ export interface IpcContract {
   'keys:test': { args: [keyId: string]; result: KeyTestResult }
   'keys:setEnabled': { args: [keyId: string, enabled: boolean]; result: ProviderView[] }
   'keys:delete': { args: [keyId: string]; result: ProviderView[] }
+  'models:list': { args: []; result: ModelView[] }
+  'models:syncStatus': { args: []; result: ProviderSyncStatus[] }
+  /** Sync one provider, or all when omitted. */
+  'models:sync': { args: [providerId?: string]; result: SyncResult[] }
+  'models:setEnabled': { args: [modelId: string, enabled: boolean]; result: ModelView }
+  /** `null` for a profile clears the override. */
+  'models:setQuality': { args: [modelId: string, quality: Partial<Record<QualityProfile, number | null>>]; result: ModelView }
+  'models:test': { args: [modelId: string]; result: ModelTestResult }
 }
 
 export type IpcChannel = keyof IpcContract
@@ -103,6 +169,8 @@ export type IpcChannel = keyof IpcContract
 /** Events pushed from main to renderer. */
 export interface IpcEvents {
   'gateway:statusChanged': GatewayStatus
+  /** The registry changed (sync finished, model tested); the renderer refetches. */
+  'models:changed': { reason: 'sync' | 'test' | 'edit' }
 }
 
 export type IpcEvent = keyof IpcEvents
@@ -125,7 +193,13 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'keys:add',
   'keys:test',
   'keys:setEnabled',
-  'keys:delete'
+  'keys:delete',
+  'models:list',
+  'models:syncStatus',
+  'models:sync',
+  'models:setEnabled',
+  'models:setQuality',
+  'models:test'
 ] as const
 
-export const IPC_EVENTS: readonly IpcEvent[] = ['gateway:statusChanged'] as const
+export const IPC_EVENTS: readonly IpcEvent[] = ['gateway:statusChanged', 'models:changed'] as const

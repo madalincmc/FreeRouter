@@ -99,6 +99,11 @@ export class ProviderStore {
     })
   }
 
+  isEnabled(id: string): boolean {
+    const row = this.db.prepare<[string], { enabled: number }>('SELECT enabled FROM providers WHERE id = ?').get(id)
+    return row ? row.enabled === 1 : false
+  }
+
   setEnabled(id: string, enabled: boolean): void {
     this.assertKnown(id)
     this.db.prepare('UPDATE providers SET enabled = ? WHERE id = ?').run(enabled ? 1 : 0, id)

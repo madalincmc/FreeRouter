@@ -39,22 +39,37 @@ export function memoryDb(): Database.Database {
 export interface FakeResponse {
   status: number
   body?: unknown
+  headers?: Record<string, string>
 }
 
+export interface FakeCall {
+  url: string
+  method: string
+  headers: Record<string, string>
+  body?: unknown
+}
+
+type Route = FakeResponse | Error | ((headers: Record<string, string>, body: unknown) => FakeResponse)
+
 /** A scripted fetch: maps URL → response (or thrown error), and records calls. */
-export function fakeFetch(
-  routes: Record<string, FakeResponse | Error | ((headers: Record<string, string>) => FakeResponse)>
-): FetchLike & { calls: { url: string; headers: Record<string, string> }[] } {
-  const calls: { url: string; headers: Record<string, string> }[] = []
+export function fakeFetch(routes: Record<string, Route>): FetchLike & { calls: FakeCall[] } {
+  const calls: FakeCall[] = []
   const fn = (async (url, init) => {
-    calls.push({ url, headers: init.headers })
+    const body = init.body ? JSON.parse(init.body) : undefined
+    calls.push({ url, method: init.method, headers: init.headers, body })
     const route = routes[url]
     if (!route) throw new Error(`fakeFetch: no route for ${url}`)
     if (route instanceof Error) throw route
-    const r = typeof route === 'function' ? route(init.headers) : route
+    const r = typeof route === 'function' ? route(init.headers, body) : route
     const text = typeof r.body === 'string' ? r.body : JSON.stringify(r.body ?? {})
-    return { status: r.status, ok: r.status >= 200 && r.status < 300, text: async () => text }
-  }) as FetchLike & { calls: typeof calls }
+    const headers = new Map(Object.entries(r.headers ?? {}).map(([k, v]) => [k.toLowerCase(), v]))
+    return {
+      status: r.status,
+      ok: r.status >= 200 && r.status < 300,
+      headers: { get: (name: string) => headers.get(name.toLowerCase()) ?? null },
+      text: async () => text
+    }
+  }) as FetchLike & { calls: FakeCall[] }
   fn.calls = calls
   return fn
 }

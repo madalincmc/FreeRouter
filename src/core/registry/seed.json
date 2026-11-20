@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "note": "Hand-curated capability tags and 0-100 quality scores per profile. First matching family wins (case-insensitive regex on the provider's model id), so specific patterns come before general ones. Unknown models fall back to heuristics (parameter count, metadata). Users can override any score in the Models screen.",
+  "families": [
+    { "match": "openrouter/free$", "tags": [], "quality": { "general": 50, "coding": 45, "reasoning": 45, "tools": 40 } },
+
+    { "match": "gpt-oss-120b", "tags": ["coding", "reasoning", "tools"], "quality": { "general": 76, "coding": 74, "reasoning": 78, "tools": 72 }, "contextWindow": 131072 },
+    { "match": "gpt-oss-20b", "tags": ["reasoning", "tools"], "quality": { "general": 64, "coding": 62, "reasoning": 66, "tools": 62 }, "contextWindow": 131072 },
+
+    { "match": "llama-4-maverick", "tags": ["tools", "vision"], "quality": { "general": 70, "coding": 64, "reasoning": 60, "tools": 64 } },
+    { "match": "llama-4-scout", "tags": ["tools", "vision"], "quality": { "general": 64, "coding": 58, "reasoning": 55, "tools": 60 } },
+    { "match": "llama-3\\.3-70b", "tags": ["tools"], "quality": { "general": 68, "coding": 62, "reasoning": 58, "tools": 64 }, "contextWindow": 131072 },
+    { "match": "llama-3\\.1-8b|llama3\\.1-8b", "tags": ["tools", "fast"], "quality": { "general": 45, "coding": 38, "reasoning": 35, "tools": 42 }, "contextWindow": 131072 },
+
+    { "match": "qwen3?-coder", "tags": ["coding", "tools"], "quality": { "general": 70, "coding": 80, "reasoning": 66, "tools": 74 } },
+    { "match": "qwen-?3-235b|qwen3-235b", "tags": ["coding", "reasoning", "tools"], "quality": { "general": 76, "coding": 74, "reasoning": 76, "tools": 70 } },
+    { "match": "qwen-?3-32b|qwen3-32b", "tags": ["reasoning", "tools"], "quality": { "general": 66, "coding": 64, "reasoning": 68, "tools": 64 } },
+    { "match": "qwq", "tags": ["reasoning"], "quality": { "general": 62, "coding": 60, "reasoning": 70, "tools": 50 } },
+
+    { "match": "deepseek-r1", "tags": ["reasoning"], "quality": { "general": 74, "coding": 72, "reasoning": 82, "tools": 50 } },
+    { "match": "deepseek-(v3|chat)", "tags": ["coding", "tools"], "quality": { "general": 76, "coding": 76, "reasoning": 70, "tools": 70 } },
+    { "match": "kimi-k2", "tags": ["coding", "tools"], "quality": { "general": 76, "coding": 78, "reasoning": 70, "tools": 76 } },
+    { "match": "glm-4\\.[5-9]", "tags": ["coding", "reasoning", "tools"], "quality": { "general": 74, "coding": 76, "reasoning": 72, "tools": 72 } },
+
+    { "match": "gemini-3(\\.\\d)?-pro", "tags": ["coding", "reasoning", "tools", "vision"], "quality": { "general": 90, "coding": 88, "reasoning": 90, "tools": 86 } },
+    { "match": "gemini-3(\\.\\d)?-flash-lite", "tags": ["tools", "vision", "fast"], "quality": { "general": 72, "coding": 68, "reasoning": 66, "tools": 68 } },
+    { "match": "gemini-3(\\.\\d)?-flash", "tags": ["coding", "reasoning", "tools", "vision", "fast"], "quality": { "general": 82, "coding": 80, "reasoning": 80, "tools": 78 } },
+    { "match": "gemini-2\\.5-pro", "tags": ["coding", "reasoning", "tools", "vision"], "quality": { "general": 85, "coding": 84, "reasoning": 86, "tools": 80 } },
+    { "match": "gemini-2\\.5-flash-lite", "tags": ["tools", "vision", "fast"], "quality": { "general": 66, "coding": 60, "reasoning": 58, "tools": 62 } },
+    { "match": "gemini-2\\.5-flash", "tags": ["coding", "reasoning", "tools", "vision", "fast"], "quality": { "general": 76, "coding": 74, "reasoning": 74, "tools": 72 } },
+    { "match": "gemini-2\\.0-flash", "tags": ["tools", "vision", "fast"], "quality": { "general": 68, "coding": 64, "reasoning": 58, "tools": 66 } },
+    { "match": "gemma-3n", "tags": ["fast"], "quality": { "general": 44, "coding": 38, "reasoning": 36, "tools": 0 } },
+    { "match": "gemma-3-27b", "tags": ["vision"], "quality": { "general": 58, "coding": 52, "reasoning": 50, "tools": 0 } },
+
+    { "match": "devstral", "tags": ["coding", "tools"], "quality": { "general": 66, "coding": 76, "reasoning": 60, "tools": 74 } },
+    { "match": "codestral", "tags": ["coding"], "quality": { "general": 60, "coding": 74, "reasoning": 52, "tools": 60 }, "contextWindow": 256000 },
+    { "match": "magistral-medium", "tags": ["reasoning", "tools"], "quality": { "general": 72, "coding": 68, "reasoning": 76, "tools": 66 } },
+    { "match": "magistral-small", "tags": ["reasoning", "tools"], "quality": { "general": 62, "coding": 58, "reasoning": 66, "tools": 60 } },
+    { "match": "mistral-large", "tags": ["coding", "tools"], "quality": { "general": 76, "coding": 72, "reasoning": 70, "tools": 74 } },
+    { "match": "mistral-medium", "tags": ["coding", "tools", "vision"], "quality": { "general": 72, "coding": 70, "reasoning": 66, "tools": 70 } },
+    { "match": "mistral-small", "tags": ["tools", "vision", "fast"], "quality": { "general": 62, "coding": 58, "reasoning": 54, "tools": 62 } },
+    { "match": "pixtral-large", "tags": ["tools", "vision"], "quality": { "general": 70, "coding": 62, "reasoning": 62, "tools": 66 } },
+    { "match": "ministral", "tags": ["tools", "fast"], "quality": { "general": 48, "coding": 42, "reasoning": 40, "tools": 50 } },
+    { "match": "open-mistral-nemo|mistral-nemo", "tags": ["tools"], "quality": { "general": 50, "coding": 44, "reasoning": 42, "tools": 50 } }
+  ]
+}

@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "limitsNote": "Seed values from the PRD (Nov 2026). Free-tier limits change often: rate-limit headers override them at runtime and users can override them in Settings.",
   "providers": [
     {
@@ -14,7 +14,23 @@
       "keyRotation": false,
       "limits": { "rpm": 20, "rpd": 50 },
       "notes": "Only :free models count. 50 requests/day account-wide, or 1,000/day after a one-time purchase of 10 credits. A negative balance returns 402 even on free models. Extra keys do not add capacity.",
-      "validation": { "url": "https://openrouter.ai/api/v1/key", "invalidStatuses": [401, 403] }
+      "validation": { "url": "https://openrouter.ai/api/v1/key", "invalidStatuses": [401, 403] },
+      "models": {
+        "url": "https://openrouter.ai/api/v1/models",
+        "auth": "none",
+        "listPath": "data",
+        "fields": {
+          "id": "id",
+          "name": "name",
+          "contextWindow": "context_length",
+          "maxOutput": "top_provider.max_completion_tokens",
+          "inputModalities": "architecture.input_modalities",
+          "outputModalities": "architecture.output_modalities",
+          "supportedParameters": "supported_parameters"
+        },
+        "free": { "idSuffix": ":free", "zeroPricePaths": ["pricing.prompt", "pricing.completion"] },
+        "exclude": []
+      }
     },
     {
       "id": "groq",
@@ -28,7 +44,20 @@
       "keyRotation": true,
       "limits": { "rpm": 30, "rpd": 1000 },
       "notes": "Limits are per model and returned in x-ratelimit-* headers. Very fast.",
-      "validation": { "url": "https://api.groq.com/openai/v1/models", "invalidStatuses": [401, 403] }
+      "validation": { "url": "https://api.groq.com/openai/v1/models", "invalidStatuses": [401, 403] },
+      "models": {
+        "auth": "required",
+        "listPath": "data",
+        "fields": {
+          "id": "id",
+          "contextWindow": "context_window",
+          "maxOutput": "max_completion_tokens",
+          "active": "active"
+        },
+        "free": { "all": true },
+        "exclude": ["whisper", "tts", "playai", "orpheus", "guard", "safeguard", "compound"],
+        "defaultTags": ["fast"]
+      }
     },
     {
       "id": "gemini",
@@ -45,6 +74,23 @@
       "validation": {
         "url": "https://generativelanguage.googleapis.com/v1beta/openai/models",
         "invalidStatuses": [400, 401, 403]
+      },
+      "models": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000",
+        "auth": "required",
+        "authHeader": "x-goog-api-key",
+        "listPath": "models",
+        "fields": {
+          "id": "name",
+          "name": "displayName",
+          "contextWindow": "inputTokenLimit",
+          "maxOutput": "outputTokenLimit",
+          "reasoningFlag": "thinking"
+        },
+        "idStrip": "^models/",
+        "require": [{ "path": "supportedGenerationMethods", "includes": "generateContent" }],
+        "free": { "all": true },
+        "exclude": ["embed", "tts", "imagen", "veo", "aqa", "image", "live", "native-audio", "learnlm", "robotics", "computer-use"]
       }
     },
     {
@@ -59,7 +105,15 @@
       "keyRotation": true,
       "limits": { "rpm": 30, "tpd": 1000000 },
       "notes": "Very high throughput. The free tier has a reduced context window.",
-      "validation": { "url": "https://api.cerebras.ai/v1/models", "invalidStatuses": [401, 403] }
+      "validation": { "url": "https://api.cerebras.ai/v1/models", "invalidStatuses": [401, 403] },
+      "models": {
+        "auth": "required",
+        "listPath": "data",
+        "fields": { "id": "id" },
+        "free": { "all": true },
+        "exclude": [],
+        "defaultTags": ["fast"]
+      }
     },
     {
       "id": "mistral",
@@ -72,24 +126,20 @@
       "keyRotation": true,
       "limits": { "rpm": 60 },
       "notes": "Free (Experiment) plan with account-specific limits; data may be used for training unless opted out. EU hosting. Codestral is good for code.",
-      "validation": { "url": "https://api.mistral.ai/v1/models", "invalidStatuses": [401, 403] }
-    },
-    {
-      "id": "github",
-      "name": "GitHub Models",
-      "baseUrl": "https://models.github.ai/inference",
-      "keyUrl": "https://github.com/settings/personal-access-tokens/new",
-      "docsUrl": "https://docs.github.com/en/github-models/use-github-models/prototyping-with-ai-models#rate-limits",
-      "keyPrefix": "github_pat_",
-      "mayTrainOnData": false,
-      "limitScope": "account",
-      "keyRotation": false,
-      "limits": { "rpm": 10, "rpd": 50 },
-      "notes": "Authenticate with a fine-grained PAT that has the models:read permission. Limits depend on your Copilot plan; token caps per request are tight.",
-      "validation": {
-        "url": "https://api.github.com/user",
-        "invalidStatuses": [401, 403],
-        "headers": { "Accept": "application/vnd.github+json", "User-Agent": "FreeRouter-Desktop" }
+      "validation": { "url": "https://api.mistral.ai/v1/models", "invalidStatuses": [401, 403] },
+      "models": {
+        "auth": "required",
+        "listPath": "data",
+        "fields": {
+          "id": "id",
+          "name": "name",
+          "contextWindow": "max_context_length",
+          "toolsFlag": "capabilities.function_calling",
+          "visionFlag": "capabilities.vision",
+          "chatFlag": "capabilities.completion_chat"
+        },
+        "free": { "all": true },
+        "exclude": ["embed", "moderation", "ocr", "transcribe", "voxtral"]
       }
     }
   ]
