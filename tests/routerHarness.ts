@@ -10,6 +10,7 @@ import { HealthTracker } from '@core/routing/health'
 import { RequestLog } from '@core/routing/log'
 import { QuotaTracker } from '@core/routing/quota'
 import { Router } from '@core/routing/router'
+import { StickyStore } from '@core/routing/sticky'
 import { DEFAULT_ROUTER_CONFIG, type ChatRequest, type RouteOptions, type RouterConfig, type RouterEvent } from '@core/routing/types'
 import { FakeProvider, type FakeModel } from './fakeProvider'
 import { fakeEncryptor, memoryDb } from './helpers'
@@ -96,6 +97,7 @@ export async function makeHarness(o: HarnessOptions = {}) {
   const chains = new ChainStore(db)
   const requestLog = new RequestLog(db)
   const config: RouterConfig = { ...DEFAULT_ROUTER_CONFIG, ...o.config }
+  const sticky = new StickyStore()
 
   const router = new Router({
     snapshot: () => ({ models: registry.list(), providers: providers.list((id) => vault.list(id)) }),
@@ -107,6 +109,7 @@ export async function makeHarness(o: HarnessOptions = {}) {
     log: (e) => requestLog.write(e),
     quota,
     health,
+    sticky,
     fetch: realFetch,
     config: () => config
   })
@@ -131,7 +134,7 @@ export async function makeHarness(o: HarnessOptions = {}) {
 
   const conversations = new ConversationStore(db)
 
-  return { fake, router, registry, vault, providers, quota, health, chains, requestLog, conversations, config, run, stop: () => fake.stop() }
+  return { fake, router, registry, vault, providers, quota, health, chains, requestLog, conversations, sticky, config, run, stop: () => fake.stop() }
 }
 
 export type Harness = Awaited<ReturnType<typeof makeHarness>>

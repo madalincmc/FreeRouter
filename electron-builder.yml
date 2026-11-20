@@ -1,5 +1,6 @@
 appId: com.freerouter.desktop
 productName: FreeRouter
+copyright: Copyright © 2026 FreeRouter
 directories:
   output: dist
   buildResources: resources
@@ -8,8 +9,15 @@ files:
   - resources/**
   - package.json
   - '!**/*.{map,md,ts,tsx}'
+  # better-sqlite3 ships sources and prebuilds for every platform; keep only the Windows x64 binary.
+  - '!**/node_modules/better-sqlite3/{deps,src,docs,benchmark,build}/**'
+  - '!**/node_modules/better-sqlite3/prebuilds/{darwin,linux,linuxmusl}-*.node'
+  - '!**/node_modules/better-sqlite3/prebuilds/win32-arm64.node'
 asarUnpack:
   - '**/*.node'
+# English UI only: drop the other ~50 MB of Chromium locales.
+electronLanguages:
+  - en-US
 win:
   target:
     - target: nsis
@@ -20,6 +28,9 @@ nsis:
   perMachine: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: FreeRouter
+  runAfterFinish: true
 # better-sqlite3 ships N-API prebuilds that load in both Node and Electron; no rebuild needed
 # (and node-gyp source builds fail when the path contains a space).
 npmRebuild: false

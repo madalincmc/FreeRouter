@@ -4,6 +4,7 @@
   "version": "0.0.1",
   "private": true,
   "description": "Windows desktop orchestrator that routes requests across free hosted LLMs.",
+  "author": "FreeRouter",
   "main": "./out/main/index.js",
   "type": "module",
   "scripts": {

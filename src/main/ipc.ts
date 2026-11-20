@@ -14,6 +14,7 @@ const limits = z.object({ rpm: limitValue, rpd: limitValue, tpm: limitValue, tpd
 const modelId = z.string().min(3).max(256)
 const qualityValue = z.number().int().min(0).max(100).nullable().optional()
 const uuid = z.uuid()
+const weight = z.number().min(0).max(100)
 /** Model picker value: auto, auto:<profile>, chain:<name> or <provider>/<model_id>. */
 const pickerValue = z.string().min(1).max(256).regex(/^(auto(:[a-z]+)?|chain:[\w.-]+|[a-z0-9-]+\/.+)$/)
 
@@ -71,7 +72,39 @@ export const argSchemas: { [C in IpcChannel]: z.ZodType<IpcContract[C]['args']> 
   'chat:regenerate': z.union([z.tuple([uuid]), z.tuple([uuid, pickerValue]), z.tuple([uuid, z.undefined()])]),
   'chat:continue': z.tuple([uuid, uuid]),
   'chat:stop': z.tuple([uuid]),
-  'chat:modelOptions': z.tuple([])
+  'chat:modelOptions': z.tuple([]),
+  'settings:get': z.tuple([]),
+  'settings:update': z.tuple([
+    z
+      .object({
+        routing: z
+          .object({
+            weights: z
+              .object({ quality: weight, reliability: weight, speed: weight, headroom: weight })
+              .strict()
+              .optional(),
+            topN: z.number().int().min(1).max(10).optional(),
+            maxPerProvider: z.number().int().min(1).max(10).optional(),
+            ttftTimeoutMs: z.number().int().min(2_000).max(120_000).optional(),
+            totalTimeoutMs: z.number().int().min(10_000).max(900_000).optional(),
+            allowFallbackWhenPinned: z.boolean().optional(),
+            minToolsQuality: z.number().int().min(0).max(100).optional(),
+            stickiness: z.boolean().optional()
+          })
+          .strict()
+          .optional(),
+        privateMode: z.boolean().optional(),
+        logRetentionDays: z.number().int().min(1).max(365).optional(),
+        launchAtLogin: z.boolean().optional(),
+        startMinimized: z.boolean().optional(),
+        gatewayAllowedOrigins: z.array(z.string().regex(/^https?:\/\/[^\s/]+$/)).max(20).optional()
+      })
+      .strict()
+  ]),
+  'settings:resetRouting': z.tuple([]),
+  'chains:list': z.tuple([]),
+  'chains:save': z.tuple([z.string().regex(/^[\w.-]{1,40}$/), z.array(modelId).max(20)]),
+  'chains:delete': z.tuple([z.string().max(40)])
 }
 
 export function handle<C extends IpcChannel>(

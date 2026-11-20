@@ -225,6 +225,35 @@ export interface ModelOptions {
   models: { id: string; label: string; provider: string; tags: CapabilityTag[] }[]
 }
 
+// ---- Settings (M6) -------------------------------------------------------
+
+export interface RoutingSettings {
+  weights: { quality: number; reliability: number; speed: number; headroom: number }
+  topN: number
+  maxPerProvider: number
+  ttftTimeoutMs: number
+  totalTimeoutMs: number
+  allowFallbackWhenPinned: boolean
+  minToolsQuality: number
+  stickiness: boolean
+}
+
+export interface AppSettings {
+  routing: RoutingSettings
+  /** Excludes may-train-on-data providers for all chat and gateway traffic. */
+  privateMode: boolean
+  logRetentionDays: number
+  launchAtLogin: boolean
+  startMinimized: boolean
+  /** Browser origins allowed to call the gateway (empty = none). */
+  gatewayAllowedOrigins: string[]
+}
+
+export interface ChainView {
+  name: string
+  modelIds: string[]
+}
+
 // ---- Channels ------------------------------------------------------------
 
 export interface IpcContract {
@@ -273,6 +302,12 @@ export interface IpcContract {
   'chat:continue': { args: [conversationId: string, messageId: string]; result: { assistantMessageId: string } }
   'chat:stop': { args: [messageId: string]; result: boolean }
   'chat:modelOptions': { args: []; result: ModelOptions }
+  'settings:get': { args: []; result: AppSettings }
+  'settings:update': { args: [patch: Partial<Omit<AppSettings, 'routing'>> & { routing?: Partial<RoutingSettings> }]; result: AppSettings }
+  'settings:resetRouting': { args: []; result: AppSettings }
+  'chains:list': { args: []; result: ChainView[] }
+  'chains:save': { args: [name: string, modelIds: string[]]; result: ChainView[] }
+  'chains:delete': { args: [name: string]; result: ChainView[] }
 }
 
 export type IpcChannel = keyof IpcContract
@@ -329,7 +364,13 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'chat:regenerate',
   'chat:continue',
   'chat:stop',
-  'chat:modelOptions'
+  'chat:modelOptions',
+  'settings:get',
+  'settings:update',
+  'settings:resetRouting',
+  'chains:list',
+  'chains:save',
+  'chains:delete'
 ] as const
 
 export const IPC_EVENTS: readonly IpcEvent[] = ['gateway:statusChanged', 'gateway:request', 'models:changed', 'chat:event'] as const

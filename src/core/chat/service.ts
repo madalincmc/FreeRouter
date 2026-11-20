@@ -11,6 +11,8 @@ export interface ChatServiceDeps {
   emit: (e: ChatEvent) => void
   /** Deltas are coalesced into one event per window (ms) to keep IPC light. 0 = every chunk. */
   flushMs?: number
+  /** Global private mode (Settings); a conversation can also turn it on for itself. */
+  privateMode?: () => boolean
 }
 
 interface RunSpec {
@@ -167,7 +169,13 @@ export class ChatService {
     try {
       for await (const ev of this.d.route(
         { model: spec.model, messages: spec.history, stream: true },
-        { source: 'chat', privateMode: conv.privateMode, signal, excludeModels: spec.excludeModels }
+        {
+          source: 'chat',
+          privateMode: conv.privateMode || this.d.privateMode?.() === true,
+          signal,
+          excludeModels: spec.excludeModels,
+          stickyKey: `chat:${conversationId}`
+        }
       )) {
         switch (ev.type) {
           case 'start':

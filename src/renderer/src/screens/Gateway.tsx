@@ -78,7 +78,7 @@ export function GatewayScreen() {
 
   return (
     <Page title="Gateway" subtitle="Local OpenAI-compatible endpoint for Cline, Continue, Aider and any OpenAI SDK.">
-      <div className="grid gap-4">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
         <Card>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">

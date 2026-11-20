@@ -44,6 +44,8 @@ export interface RankInput {
   excludeKeys?: Set<string>
   /** Round-robin offset per provider (only used where the provider allows rotation). */
   rotation?: Map<string, number>
+  /** Sticky model for this session: tried first when it still fits the request (auto only). */
+  preferModel?: string
 }
 
 export function effectiveLimits(p: ProviderView): Limits {
@@ -172,7 +174,12 @@ export function rank(input: RankInput): Ranking {
     )
 
   const s = input.strategy
-  if (s.kind === 'auto') return { candidates: autoList(), excluded }
+  if (s.kind === 'auto') {
+    const sticky = input.preferModel ? input.models.find((m) => m.id === input.preferModel) : undefined
+    const first = sticky ? consider(sticky, true) : null
+    if (!first) return { candidates: autoList(), excluded }
+    return { candidates: [first, ...autoList(first.model.id).slice(0, Math.max(0, input.cfg.topN - 1))], excluded }
+  }
 
   if (s.kind === 'pinned') {
     const pinned = input.models.find((m) => m.id === s.modelId)

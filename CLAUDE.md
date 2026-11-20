@@ -54,6 +54,9 @@ resources/     icons (icon.png for app/installer, tray.png for the tray)
 - **Normalisation** (`core/routing/normalize.ts`) runs inside the router, so chat benefits too:
   - `buildUpstreamBody` removes `GLOBAL_STRIP_PARAMS` and each profile's `request.stripParams`. That list is best-effort data; a 400 still fails over.
   - `ChunkNormalizer` fixes tool-call deltas (index, id, type, string arguments) and finish reasons.
+- **Settings** (`core/settings.ts`). `AppSettingsStore` exposes typed settings over the `settings` table. The router reads `routerConfig()` on every request, so changes apply immediately. Weights are normalised to shares on save; the UI edits them in 0–100 units. Launch at login (`--hidden`) is registered only by packaged builds. Hidden launches and "start minimised" open only the tray.
+- **Stickiness** (`core/routing/sticky.ts`). It applies to `auto` routing only. Chat uses `chat:<conversationId>`. The gateway uses `x-fr-session`, or a hash of the first system message plus the user-agent. The sticky model is tried first while it still passes this request's filters, and is replaced as soon as another model succeeds.
+- **Packaging** (`pnpm package`). electron-builder handles pnpm's layout natively. `electron-builder.yml` strips better-sqlite3's sources and non-Windows prebuilds and keeps only the en-US locale. The installer is about 114 MB (PRD: < 150 MB). Unsigned; auto-update and code signing come later.
 - **Model output safety.** react-markdown never renders raw HTML. The CSP blocks remote images. Links open in the system browser.
 - **Dev end-to-end without keys.** Run `pnpm dev:fake`, then start the app with `FREEROUTER_DATA_DIR=<temp dir>` and `FREEROUTER_DEV_FAKE_PROVIDER=<FAKE_URL>` (see `src/main/devHooks.ts`). Both are ignored in packaged builds. Always use a separate data dir so the real profile isn't touched.
 
@@ -63,4 +66,5 @@ resources/     icons (icon.png for app/installer, tray.png for the tray)
 - `pnpm test`: Vitest
 - `pnpm typecheck`: tsc for the node and web projects
 - `pnpm build`: production bundle in `out/`
-- `pnpm package`: NSIS installer in `dist/` (finished in M6)
+- `pnpm package`: NSIS installer in `dist/` (`FreeRouter Setup <version>.exe`, plus `dist/win-unpacked/` for quick checks)
+- `pnpm dev:fake`: local fake provider for keyless end-to-end checks (see the "Dev end-to-end" note above)

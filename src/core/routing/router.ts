@@ -11,6 +11,7 @@ import type { QuotaTracker } from './quota'
 import type { RequestLogEntry } from './log'
 import { buildUpstreamBody, ChunkNormalizer } from './normalize'
 import { readSse } from './sse'
+import type { StickyStore } from './sticky'
 import {
   DEFAULT_ROUTER_CONFIG,
   type Attempt,
@@ -34,6 +35,7 @@ export interface RouterDeps {
   log(entry: RequestLogEntry): void
   quota: QuotaTracker
   health: HealthTracker
+  sticky?: StickyStore
   fetch: FetchLike
   now?: () => number
   config?: () => RouterConfig
@@ -127,9 +129,12 @@ export class Router {
       })
 
     let candidates: Candidate[]
+    let stickyKey: string | undefined
     try {
       const strategy = parseModelField(req.model, new Set(providers.map((p) => p.id)))
       needs = requestNeeds(req, strategy.kind === 'auto' ? strategy.profile : null, cfg)
+      // Stickiness applies to automatic routing only; pinned and chains are already explicit.
+      stickyKey = strategy.kind === 'auto' && cfg.stickiness && this.d.sticky ? opts.stickyKey : undefined
       const ranking = rank({
         strategy,
         needs,
@@ -141,7 +146,8 @@ export class Router {
         cfg,
         opts,
         rotation: this.rotation,
-        excludeModels: opts.excludeModels?.length ? new Set(opts.excludeModels) : undefined
+        excludeModels: opts.excludeModels?.length ? new Set(opts.excludeModels) : undefined,
+        preferModel: stickyKey ? this.d.sticky!.get(stickyKey) : undefined
       })
       candidates = ranking.candidates
       if (candidates.length === 0) {
@@ -170,7 +176,7 @@ export class Router {
         attempts.push({ provider: c.provider.id, model: c.model.id, outcome: 'skipped', message: 'key rejected earlier', ms: 0 })
         continue
       }
-      const result = yield* this.attempt(c, req, needs!, opts, attempts, started, log)
+      const result = yield* this.attempt(c, req, needs!, { ...opts, stickyKey }, attempts, started, log)
       if (result.kind === 'finished') return
       if (result.kind === 'cancelled') break
       if (result.failure.kind === 'auth') deadKeys.add(c.key.id)
@@ -358,6 +364,7 @@ export class Router {
     this.d.health.record(c.model.id, true)
     this.d.health.success(c.model.id)
     this.d.recordModelOutcome(c.model.id, { latencyMs: ttftMs, state: 'healthy', cooldownUntil: null, error: null })
+    if (opts.stickyKey) this.d.sticky?.set(opts.stickyKey, c.model.id)
     log('ok', {
       chosenModel: c.model.id,
       ttftMs,

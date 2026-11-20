@@ -64,6 +64,8 @@ export interface RouteOptions {
   minContext?: number
   /** Registry ids never to try for this request (e.g. "continue with another model"). */
   excludeModels?: string[]
+  /** Session key for stickiness (chat conversation id, or a gateway session hash). */
+  stickyKey?: string
   signal?: AbortSignal
 }
 
@@ -104,6 +106,8 @@ export interface RouterConfig {
   unknownContextWindow: number
   degradedStreak: number
   degradedCooldownMs: number
+  /** Keep using the model that last succeeded for a session (PRD §6). */
+  stickiness: boolean
 }
 
 export const DEFAULT_ROUTER_CONFIG: RouterConfig = {
@@ -118,7 +122,8 @@ export const DEFAULT_ROUTER_CONFIG: RouterConfig = {
   longContextTokens: 32_000,
   unknownContextWindow: 32_768,
   degradedStreak: 3,
-  degradedCooldownMs: 5 * 60_000
+  degradedCooldownMs: 5 * 60_000,
+  stickiness: true
 }
 
 export const QUALITY_FOR_PROFILE: Record<TaskProfile, QualityProfile[]> = {

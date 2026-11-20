@@ -43,7 +43,7 @@ export function ProvidersScreen() {
         </p>
       )}
       {isLoading && <p className="text-sm text-muted">Loading providers…</p>}
-      <div className="grid gap-4">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
         {providers?.map((p) => (
           <ProviderCard key={p.id} provider={p} />
         ))}

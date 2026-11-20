@@ -3,6 +3,7 @@ import type { AddressInfo } from 'node:net'
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import type { Attempt, ChatChunk, ChatRequest, RouteOptions, RouterEvent } from '../routing/types'
+import { gatewayStickyKey } from '../routing/sticky'
 import { redact } from '../security/redact'
 import { CompletionAggregator } from './aggregate'
 
@@ -126,9 +127,12 @@ export function buildGateway(deps: GatewayDeps): FastifyInstance {
       if (!reply.raw.writableFinished) controller.abort()
     })
 
+    const userAgent = (req.headers['user-agent'] ?? '').slice(0, 200) || undefined
+    const sessionHeader = req.headers['x-fr-session']
     const opts: RouteOptions = {
       source: 'gateway',
-      clientUa: (req.headers['user-agent'] ?? '').slice(0, 200) || undefined,
+      clientUa: userAgent,
+      stickyKey: gatewayStickyKey(body.messages, userAgent, typeof sessionHeader === 'string' ? sessionHeader : undefined),
       minContext: Number.isFinite(minContextHeader) && minContextHeader > 0 ? minContextHeader : undefined,
       privateMode: req.headers['x-fr-private'] === '1' || deps.privateMode?.() === true,
       signal: controller.signal

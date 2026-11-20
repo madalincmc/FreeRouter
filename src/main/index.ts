@@ -21,6 +21,8 @@ import type { ProviderView, ThemePreference } from '@shared/ipc'
 import { gatewayModels } from '@core/gateway/models'
 import { toGatewayView } from '@core/routing/log'
 import { GatewayController } from './gateway'
+import { AppSettingsStore } from '@core/settings'
+import { StickyStore } from '@core/routing/sticky'
 import { openDatabase, SettingsStore, type Db } from './db'
 import { safeStorageEncryptor } from './encryptor'
 import { devDataDir, ensureDevKey, withDevProvider } from './devHooks'
@@ -80,6 +82,12 @@ if (!app.requestSingleInstanceLock()) {
     const opened = openDatabase(app.getPath('userData'))
     db = opened.db
     const settings = new SettingsStore(db)
+    const appSettings = new AppSettingsStore(settings)
+    const applyLoginItem = (): void => {
+      // Only a packaged build registers itself; in dev it would register electron.exe.
+      if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: appSettings.get().launchAtLogin, args: ['--hidden'] })
+    }
+    applyLoginItem()
 
     const applyTheme = (theme: ThemePreference): void => {
       nativeTheme.themeSource = theme
@@ -123,7 +131,10 @@ if (!app.requestSingleInstanceLock()) {
       },
       quota,
       health: new HealthTracker(),
-      fetch: httpFetch
+      sticky: new StickyStore(),
+      fetch: httpFetch,
+      // Read per request, so Settings changes apply to the next request.
+      config: () => appSettings.routerConfig()
     })
     // ---- Chat (M4) ----
     const conversations = new ConversationStore(db)
@@ -131,7 +142,8 @@ if (!app.requestSingleInstanceLock()) {
     const chat = new ChatService({
       store: conversations,
       route: (req, opts) => router.route(req, opts),
-      emit: (e) => emit(mainWindow?.webContents, 'chat:event', e)
+      emit: (e) => emit(mainWindow?.webContents, 'chat:event', e),
+      privateMode: () => appSettings.get().privateMode
     })
     app.on('before-quit', () => chat.stopAll())
     handle('chat:list', isTrustedSender, () => conversations.list())
@@ -157,7 +169,8 @@ if (!app.requestSingleInstanceLock()) {
         route: (req, opts) => router.route(req, opts),
         listModels: () => gatewayModels(registry.list(), listProviders(), chains.list().map((c) => c.name)),
         healthyCount: () => countRoutable(registry.list(), listProviders()),
-        allowedOrigins: () => settings.get<string[]>('gateway.allowedOrigins', []),
+        allowedOrigins: () => appSettings.get().gatewayAllowedOrigins,
+        privateMode: () => appSettings.get().privateMode,
         version: app.getVersion()
       },
       settings,
@@ -177,7 +190,29 @@ if (!app.requestSingleInstanceLock()) {
     handle('gateway:recentRequests', isTrustedSender, (limit) => requestLog.recentGateway(limit))
 
     // Metadata-only request log, kept 7 days by default (PRD §10).
-    requestLog.prune(Date.now() - settings.get('log.retentionDays', 7) * 24 * 3600_000)
+    const pruneLog = (): number => requestLog.prune(Date.now() - appSettings.get().logRetentionDays * 24 * 3600_000)
+    pruneLog()
+    setInterval(pruneLog, 6 * 3600_000).unref()
+
+    // ---- Settings & chains (M6) ----
+    handle('settings:get', isTrustedSender, () => appSettings.get())
+    handle('settings:update', isTrustedSender, (patch) => {
+      const next = appSettings.update(patch)
+      if (patch.launchAtLogin !== undefined) applyLoginItem()
+      if (patch.logRetentionDays !== undefined) pruneLog()
+      return next
+    })
+    handle('settings:resetRouting', isTrustedSender, () => appSettings.resetRouting())
+    const listChains = () => chains.list().map((c) => ({ name: c.name, modelIds: c.modelIds }))
+    handle('chains:list', isTrustedSender, listChains)
+    handle('chains:save', isTrustedSender, (name, modelIds) => {
+      chains.save(name, modelIds)
+      return listChains()
+    })
+    handle('chains:delete', isTrustedSender, (name) => {
+      chains.delete(name)
+      return listChains()
+    })
 
     const runSync = async (providerId?: string) => {
       const results = await registryService.sync(providerId)
@@ -251,7 +286,9 @@ if (!app.requestSingleInstanceLock()) {
       healthyModelCount: () => countRoutable(registry.list(), listProviders())
     })
 
-    showWindow()
+    // Launched at login (--hidden) or "start minimised": live in the tray, gateway already up.
+    const hidden = process.argv.includes('--hidden') || appSettings.get().startMinimized
+    if (!hidden) showWindow()
 
     // Sync at startup (cached registry is served meanwhile), then every 6 hours (PRD §5).
     void runSync()
