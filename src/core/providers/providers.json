@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "limitsNote": "Seed values from the PRD (Nov 2026). Free-tier limits change often: rate-limit headers override them at runtime and users can override them in Settings.",
   "providers": [
     {
@@ -180,11 +180,12 @@
       "mayTrainOnData": false,
       "limitScope": "organization",
       "keyRotation": true,
+      "defaultEnabled": false,
       "limits": {
         "rpm": 30,
         "tpd": 1000000
       },
-      "notes": "Very high throughput. The free tier has a reduced context window.",
+      "notes": "No free API key as of Nov 2026: new accounts need a card (a $5 trial credit). Off by default; adding a key switches it on. Very high throughput.",
       "validation": {
         "url": "https://api.cerebras.ai/v1/models",
         "invalidStatuses": [
@@ -224,10 +225,11 @@
       "mayTrainOnData": true,
       "limitScope": "organization",
       "keyRotation": true,
+      "defaultEnabled": false,
       "limits": {
         "rpm": 60
       },
-      "notes": "Free (Experiment) plan with account-specific limits; data may be used for training unless opted out. EU hosting. Codestral is good for code.",
+      "notes": "No free API key as of Nov 2026: API keys need billing on La Plateforme. Off by default; adding a key switches it on. EU hosting; Codestral is good for code.",
       "validation": {
         "url": "https://api.mistral.ai/v1/models",
         "invalidStatuses": [

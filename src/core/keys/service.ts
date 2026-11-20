@@ -42,6 +42,8 @@ export class KeyService {
       key,
       status: test.outcome === 'valid' ? 'valid' : 'untested'
     })
+    // Adding a key to an off-by-default provider (e.g. after setting up billing) switches it on.
+    this.providers.applyDefault(profile.id)
     return { saved: true, key: saved, test }
   }
 

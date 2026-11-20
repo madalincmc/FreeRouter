@@ -32,14 +32,49 @@ describe('provider catalog', () => {
 })
 
 describe('ProviderStore', () => {
-  it('seeds every provider enabled with no overrides', () => {
+  it('seeds providers with no overrides; ones with no free API key start disabled', () => {
     const db = memoryDb()
     const store = new ProviderStore(db, bundledCatalog)
     store.seed()
     const list = store.list(() => [])
     expect(list).toHaveLength(6)
-    expect(list.every((p) => p.enabled && Object.keys(p.limitOverrides).length === 0)).toBe(true)
+    expect(list.every((p) => Object.keys(p.limitOverrides).length === 0)).toBe(true)
+    expect(list.filter((p) => !p.enabled).map((p) => p.id)).toEqual(['cerebras', 'mistral'])
     expect(db.prepare("SELECT may_train_on_data AS t FROM providers WHERE id = 'gemini'").get()).toEqual({ t: 1 })
+  })
+
+  const insertKey = (db: ReturnType<typeof memoryDb>, providerId: string) =>
+    db
+      .prepare(
+        `INSERT INTO api_keys (id, provider_id, label, ciphertext, masked, status, enabled, created_at)
+         VALUES (?, ?, '', x'00', 'k…1', 'valid', 1, 0)`
+      )
+      .run(`k-${providerId}`, providerId)
+
+  it('an existing install picks up the new default, but never overrides the user or a provider with a key', () => {
+    const db = memoryDb()
+    const store = new ProviderStore(db, bundledCatalog)
+    // Simulate the pre-default world: everything enabled, nothing chosen by the user.
+    store.seed()
+    db.prepare('UPDATE providers SET enabled = 1').run()
+    insertKey(db, 'mistral')
+    store.seed()
+    const enabled = (id: string) => store.list(() => []).find((p) => p.id === id)!.enabled
+    expect(enabled('cerebras')).toBe(false)
+    expect(enabled('mistral')).toBe(true) // has a key
+
+    store.setEnabled('cerebras', true) // the user's choice sticks across re-seeds
+    store.seed()
+    expect(enabled('cerebras')).toBe(true)
+  })
+
+  it('applyDefault switches an off-by-default provider on once it has a key', () => {
+    const db = memoryDb()
+    const store = new ProviderStore(db, bundledCatalog)
+    store.seed()
+    insertKey(db, 'cerebras')
+    store.applyDefault('cerebras')
+    expect(store.isEnabled('cerebras')).toBe(true)
   })
 
   it('re-seeding keeps user choices but refreshes catalog data', () => {

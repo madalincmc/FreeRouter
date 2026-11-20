@@ -78,6 +78,11 @@ export const ProviderProfileSchema = z
     limitScope: z.enum(['account', 'organization', 'project', 'key']),
     /** Whether rotating several keys round-robin is allowed / useful. */
     keyRotation: z.boolean(),
+    /**
+     * Off for providers with no free API access (e.g. a card or billing is required). A provider
+     * the user switched themselves, or that already has a key, is not affected.
+     */
+    defaultEnabled: z.boolean().optional(),
     limits: LimitsSchema,
     notes: z.string(),
     validation: z

@@ -45,11 +45,15 @@ export class ProviderStore {
     for (const p of catalog.providers) this.profiles.set(p.id, p)
   }
 
-  /** Upserts catalog data, keeping the user's enabled flag and limit overrides. */
+  /**
+   * Upserts catalog data, keeping the user's limit overrides. The enabled flag follows the
+   * profile's `defaultEnabled` until the user switches the provider themselves; a provider
+   * that has a key stays enabled.
+   */
   seed(): void {
     const upsert = this.db.prepare(
       `INSERT INTO providers (id, name, base_url, enabled, profile_json, limit_overrides_json, may_train_on_data)
-       VALUES (@id, @name, @baseUrl, 1, @profile, '{}', @mayTrain)
+       VALUES (@id, @name, @baseUrl, @enabled, @profile, '{}', @mayTrain)
        ON CONFLICT(id) DO UPDATE SET
          name = excluded.name,
          base_url = excluded.base_url,
@@ -58,9 +62,30 @@ export class ProviderStore {
     )
     this.db.transaction(() => {
       for (const p of this.profiles.values()) {
-        upsert.run({ id: p.id, name: p.name, baseUrl: p.baseUrl, profile: JSON.stringify(p), mayTrain: p.mayTrainOnData ? 1 : 0 })
+        upsert.run({
+          id: p.id,
+          name: p.name,
+          baseUrl: p.baseUrl,
+          enabled: p.defaultEnabled === false ? 0 : 1,
+          profile: JSON.stringify(p),
+          mayTrain: p.mayTrainOnData ? 1 : 0
+        })
+        this.applyDefault(p.id)
       }
     })()
+  }
+
+  /** Re-applies the catalog default unless the user chose; called on seed and after a key is added. */
+  applyDefault(id: string): void {
+    const p = this.profiles.get(id)
+    if (!p) return
+    this.db
+      .prepare(
+        `UPDATE providers SET enabled = CASE
+           WHEN @def = 1 OR EXISTS (SELECT 1 FROM api_keys WHERE provider_id = @id) THEN 1 ELSE 0 END
+         WHERE id = @id AND enabled_by_user = 0`
+      )
+      .run({ id, def: p.defaultEnabled === false ? 0 : 1 })
   }
 
   profile(id: string): ProviderProfile | undefined {
@@ -106,7 +131,7 @@ export class ProviderStore {
 
   setEnabled(id: string, enabled: boolean): void {
     this.assertKnown(id)
-    this.db.prepare('UPDATE providers SET enabled = ? WHERE id = ?').run(enabled ? 1 : 0, id)
+    this.db.prepare('UPDATE providers SET enabled = ?, enabled_by_user = 1 WHERE id = ?').run(enabled ? 1 : 0, id)
   }
 
   setLimitOverrides(id: string, overrides: Limits): void {
