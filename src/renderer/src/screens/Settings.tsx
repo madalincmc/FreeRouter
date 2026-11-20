@@ -38,6 +38,7 @@ export function SettingsScreen() {
               <Row label="Platform">{info.platform}</Row>
               <Row label="Data folder">{info.dataDir}</Row>
               <Row label="Database schema">v{info.schemaVersion}</Row>
+              <Row label="Key encryption">{info.encryptionAvailable ? 'DPAPI (available)' : 'unavailable'}</Row>
             </>
           ) : (
             <p className="text-sm text-muted">Loading…</p>

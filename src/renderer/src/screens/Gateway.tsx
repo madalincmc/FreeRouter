@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { GatewayStatus } from '@shared/ipc'
-import { Card, ComingIn, Page, Row } from '../components/ui'
+import { Card, ComingIn, Page, Row, Toggle } from '../components/ui'
 import { useIpcEvent, useIpcMutation, useIpcQuery } from '../lib/ipc'
 
 export function GatewayScreen() {
@@ -22,17 +22,12 @@ export function GatewayScreen() {
               <div>Enable local gateway</div>
               <div className="text-xs text-muted">Binds to 127.0.0.1 only. Requires the gateway token.</div>
             </div>
-            <label className="relative inline-flex cursor-pointer items-center">
-              <input
-                type="checkbox"
-                className="peer sr-only"
-                checked={status?.enabled ?? false}
-                disabled={!status || setEnabled.isPending}
-                onChange={(e) => setEnabled.mutate([e.target.checked])}
-              />
-              <span className="h-5 w-9 rounded-full bg-panel-2 ring-1 ring-border transition-colors peer-checked:bg-accent" />
-              <span className="absolute left-0.5 h-4 w-4 rounded-full bg-fg transition-transform peer-checked:translate-x-4 peer-checked:bg-accent-fg" />
-            </label>
+            <Toggle
+              label="Enable local gateway"
+              checked={status?.enabled ?? false}
+              disabled={!status || setEnabled.isPending}
+              onChange={(on) => setEnabled.mutate([on])}
+            />
           </div>
           <div className="mt-3">
             <Row label="Base URL">http://127.0.0.1:{status?.port ?? 4141}/v1</Row>

@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "limitsNote": "Seed values from the PRD (Nov 2026). Free-tier limits change often: rate-limit headers override them at runtime and users can override them in Settings.",
+  "providers": [
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "keyUrl": "https://openrouter.ai/settings/keys",
+      "docsUrl": "https://openrouter.ai/docs",
+      "keyPrefix": "sk-or-",
+      "mayTrainOnData": true,
+      "limitScope": "account",
+      "keyRotation": false,
+      "limits": { "rpm": 20, "rpd": 50 },
+      "notes": "Only :free models count. 50 requests/day account-wide, or 1,000/day after a one-time purchase of 10 credits. A negative balance returns 402 even on free models. Extra keys do not add capacity.",
+      "validation": { "url": "https://openrouter.ai/api/v1/key", "invalidStatuses": [401, 403] }
+    },
+    {
+      "id": "groq",
+      "name": "Groq",
+      "baseUrl": "https://api.groq.com/openai/v1",
+      "keyUrl": "https://console.groq.com/keys",
+      "docsUrl": "https://console.groq.com/docs/rate-limits",
+      "keyPrefix": "gsk_",
+      "mayTrainOnData": false,
+      "limitScope": "organization",
+      "keyRotation": true,
+      "limits": { "rpm": 30, "rpd": 1000 },
+      "notes": "Limits are per model and returned in x-ratelimit-* headers. Very fast.",
+      "validation": { "url": "https://api.groq.com/openai/v1/models", "invalidStatuses": [401, 403] }
+    },
+    {
+      "id": "gemini",
+      "name": "Google Gemini (AI Studio)",
+      "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai",
+      "keyUrl": "https://aistudio.google.com/apikey",
+      "docsUrl": "https://ai.google.dev/gemini-api/docs/rate-limits",
+      "keyPrefix": "AIza",
+      "mayTrainOnData": true,
+      "limitScope": "project",
+      "keyRotation": true,
+      "limits": { "rpm": 10, "rpd": 250 },
+      "notes": "Limits are per model and per Google Cloud project. Flash-class models are the free workhorses. Free-tier prompts may be used for training.",
+      "validation": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/openai/models",
+        "invalidStatuses": [400, 401, 403]
+      }
+    },
+    {
+      "id": "cerebras",
+      "name": "Cerebras",
+      "baseUrl": "https://api.cerebras.ai/v1",
+      "keyUrl": "https://cloud.cerebras.ai/platform",
+      "docsUrl": "https://inference-docs.cerebras.ai/support/rate-limits",
+      "keyPrefix": "csk-",
+      "mayTrainOnData": false,
+      "limitScope": "organization",
+      "keyRotation": true,
+      "limits": { "rpm": 30, "tpd": 1000000 },
+      "notes": "Very high throughput. The free tier has a reduced context window.",
+      "validation": { "url": "https://api.cerebras.ai/v1/models", "invalidStatuses": [401, 403] }
+    },
+    {
+      "id": "mistral",
+      "name": "Mistral (La Plateforme)",
+      "baseUrl": "https://api.mistral.ai/v1",
+      "keyUrl": "https://console.mistral.ai/api-keys",
+      "docsUrl": "https://docs.mistral.ai/deployment/laplateforme/tier/",
+      "mayTrainOnData": true,
+      "limitScope": "organization",
+      "keyRotation": true,
+      "limits": { "rpm": 60 },
+      "notes": "Free (Experiment) plan with account-specific limits; data may be used for training unless opted out. EU hosting. Codestral is good for code.",
+      "validation": { "url": "https://api.mistral.ai/v1/models", "invalidStatuses": [401, 403] }
+    },
+    {
+      "id": "github",
+      "name": "GitHub Models",
+      "baseUrl": "https://models.github.ai/inference",
+      "keyUrl": "https://github.com/settings/personal-access-tokens/new",
+      "docsUrl": "https://docs.github.com/en/github-models/use-github-models/prototyping-with-ai-models#rate-limits",
+      "keyPrefix": "github_pat_",
+      "mayTrainOnData": false,
+      "limitScope": "account",
+      "keyRotation": false,
+      "limits": { "rpm": 10, "rpd": 50 },
+      "notes": "Authenticate with a fine-grained PAT that has the models:read permission. Limits depend on your Copilot plan; token caps per request are tight.",
+      "validation": {
+        "url": "https://api.github.com/user",
+        "invalidStatuses": [401, 403],
+        "headers": { "Accept": "application/vnd.github+json", "User-Agent": "FreeRouter-Desktop" }
+      }
+    }
+  ]
+}

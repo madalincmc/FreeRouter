@@ -10,6 +10,7 @@ export interface AppInfo {
   platform: string
   dataDir: string
   schemaVersion: number
+  encryptionAvailable: boolean
 }
 
 export interface GatewayStatus {
@@ -20,12 +21,81 @@ export interface GatewayStatus {
 
 export type ThemePreference = 'dark' | 'light' | 'system'
 
+// ---- Providers & keys ----------------------------------------------------
+
+export interface Limits {
+  rpm?: number
+  rpd?: number
+  tpm?: number
+  tpd?: number
+}
+
+export type LimitScope = 'account' | 'organization' | 'project' | 'key'
+
+export type KeyStatus = 'valid' | 'invalid' | 'untested'
+
+/** A key as the renderer may see it: masked, never plaintext or ciphertext. */
+export interface KeyView {
+  id: string
+  providerId: string
+  label: string
+  masked: string
+  status: KeyStatus
+  enabled: boolean
+  createdAt: number
+  lastOkAt: number | null
+}
+
+export interface KeyTestResult {
+  outcome: 'valid' | 'invalid' | 'error'
+  httpStatus?: number
+  message: string
+  latencyMs: number
+}
+
+export type AddKeyResult =
+  | { saved: true; key: KeyView; test: KeyTestResult }
+  | { saved: false; reason: 'invalid' | 'duplicate'; test?: KeyTestResult; message: string }
+
+export interface AddKeyInput {
+  providerId: string
+  label: string
+  key: string
+}
+
+export interface ProviderView {
+  id: string
+  name: string
+  baseUrl: string
+  keyUrl: string
+  docsUrl: string
+  keyPrefix?: string
+  enabled: boolean
+  mayTrainOnData: boolean
+  limitScope: LimitScope
+  keyRotation: boolean
+  notes: string
+  defaultLimits: Limits
+  limitOverrides: Limits
+  keys: KeyView[]
+}
+
+// ---- Channels ------------------------------------------------------------
+
 export interface IpcContract {
   'app:getInfo': { args: []; result: AppInfo }
   'gateway:getStatus': { args: []; result: GatewayStatus }
   'gateway:setEnabled': { args: [enabled: boolean]; result: GatewayStatus }
   'settings:getTheme': { args: []; result: ThemePreference }
   'settings:setTheme': { args: [theme: ThemePreference]; result: ThemePreference }
+  'providers:list': { args: []; result: ProviderView[] }
+  'providers:setEnabled': { args: [providerId: string, enabled: boolean]; result: ProviderView[] }
+  'providers:setLimitOverrides': { args: [providerId: string, overrides: Limits]; result: ProviderView[] }
+  /** The only channel that carries a plaintext key – renderer → main, once. */
+  'keys:add': { args: [input: AddKeyInput]; result: AddKeyResult }
+  'keys:test': { args: [keyId: string]; result: KeyTestResult }
+  'keys:setEnabled': { args: [keyId: string, enabled: boolean]; result: ProviderView[] }
+  'keys:delete': { args: [keyId: string]; result: ProviderView[] }
 }
 
 export type IpcChannel = keyof IpcContract
@@ -48,7 +118,14 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'gateway:getStatus',
   'gateway:setEnabled',
   'settings:getTheme',
-  'settings:setTheme'
+  'settings:setTheme',
+  'providers:list',
+  'providers:setEnabled',
+  'providers:setLimitOverrides',
+  'keys:add',
+  'keys:test',
+  'keys:setEnabled',
+  'keys:delete'
 ] as const
 
 export const IPC_EVENTS: readonly IpcEvent[] = ['gateway:statusChanged'] as const

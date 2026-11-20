@@ -1,11 +1,15 @@
 import { ipcMain, type IpcMainInvokeEvent, type WebContents } from 'electron'
 import { z } from 'zod'
-import { redactError } from '@core/security/redact'
+import { redact } from '@core/security/redact'
 import type { IpcChannel, IpcContract, IpcEvent, IpcEvents } from '@shared/ipc'
 
 type Handler<C extends IpcChannel> = (
   ...args: IpcContract[C]['args']
 ) => IpcContract[C]['result'] | Promise<IpcContract[C]['result']>
+
+const id = z.string().min(1).max(64)
+const limitValue = z.number().int().min(0).max(1_000_000_000).optional()
+const limits = z.object({ rpm: limitValue, rpd: limitValue, tpm: limitValue, tpd: limitValue }).strict()
 
 /** Every channel's arguments are validated with Zod before the handler runs. */
 export const argSchemas: { [C in IpcChannel]: z.ZodType<IpcContract[C]['args']> } = {
@@ -13,7 +17,23 @@ export const argSchemas: { [C in IpcChannel]: z.ZodType<IpcContract[C]['args']> 
   'gateway:getStatus': z.tuple([]),
   'gateway:setEnabled': z.tuple([z.boolean()]),
   'settings:getTheme': z.tuple([]),
-  'settings:setTheme': z.tuple([z.enum(['dark', 'light', 'system'])])
+  'settings:setTheme': z.tuple([z.enum(['dark', 'light', 'system'])]),
+  'providers:list': z.tuple([]),
+  'providers:setEnabled': z.tuple([id, z.boolean()]),
+  'providers:setLimitOverrides': z.tuple([id, limits]),
+  'keys:add': z.tuple([
+    z
+      .object({
+        providerId: id,
+        label: z.string().trim().max(64),
+        // Keys are single tokens; anything with whitespace inside is a paste error.
+        key: z.string().trim().min(8).max(1024).regex(/^\S+$/)
+      })
+      .strict()
+  ]),
+  'keys:test': z.tuple([id]),
+  'keys:setEnabled': z.tuple([id, z.boolean()]),
+  'keys:delete': z.tuple([id])
 }
 
 export function handle<C extends IpcChannel>(
@@ -29,7 +49,7 @@ export function handle<C extends IpcChannel>(
       return await handler(...parsed.data)
     } catch (err) {
       // Errors crossing the boundary are always redacted.
-      throw new Error(redactError(err))
+      throw new Error(redact(err instanceof Error ? err.message : String(err)))
     }
   })
 }

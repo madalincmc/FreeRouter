@@ -17,7 +17,7 @@ A Windows Electron app that pools free hosted LLMs behind one router. It has two
 
 ```
 src/
-  core/        pure TS: db migrations, security helpers, later router/adapters/registry (no Electron)
+  core/        pure TS: db migrations, security helpers, key vault/validation, provider catalog (no Electron)
     db/migrations/NNNN_name.sql   plain-SQL migrations, numbered 1..n, inlined via import.meta.glob
   shared/      types shared by main, preload and renderer (the IPC contract lives in ipc.ts)
   main/        Electron main process: window hardening, tray, SQLite (better-sqlite3), IPC handlers
@@ -31,6 +31,8 @@ resources/     icons (icon.png for app/installer, tray.png for the tray)
 
 - **IPC.** To add a channel: add it to `IpcContract` and `IPC_CHANNELS` in `src/shared/ipc.ts`, add a Zod schema in `argSchemas` in `src/main/ipc.ts`, then register it with `handle(...)`. In the renderer, use `useIpcQuery` / `useIpcMutation` from `renderer/src/lib/ipc.ts`.
 - **Security.** Keep `contextIsolation: true`, `nodeIntegration: false` and `sandbox: true`, keep the strict CSP in `renderer/index.html` (it is relaxed only in dev), and don't load remote content in the renderer. External links open in the system browser.
+- **Keys.** `KeyVault` (`core/keys/vault.ts`) is the only code that touches ciphertext, and `reveal()` is the only plaintext path (main process, at call time). Use Electron's **async** safeStorage API (`encryptStringAsync`/`decryptStringAsync`/`isAsyncEncryptionAvailable`); the sync API is deprecated in Electron 45. The vault re-encrypts when `shouldReEncrypt` is set. Never fall back to plaintext.
+- **Providers.** Static profiles live in `core/providers/providers.json` (Zod-validated in `catalog.ts`). User state (enabled flag, limit overrides) lives in the `providers` table. Validation quirks are profile data: `validation.url`, `invalidStatuses` (Gemini returns 400 for a bad key) and `headers` (GitHub). OpenRouter's `/models` is public, so its keys are validated with `/api/v1/key`. GitHub's catalog is public too, so its PATs are validated with `api.github.com/user`.
 - **Database.** SQLite runs in WAL mode at `%APPDATA%/FreeRouter/freerouter.db`. Schema changes are new migration files; never edit a shipped migration.
 - **Native modules.** `better-sqlite3` ≥13 ships N-API prebuilds that load in both Node (Vitest) and Electron. **Do not add `electron-builder install-app-deps` or `@electron/rebuild`.** A source build is unnecessary, and node-gyp fails because the repo path contains a space ("My PC").
 - If `node_modules/electron/dist` is missing after an install, run `node node_modules/electron/install.js`.

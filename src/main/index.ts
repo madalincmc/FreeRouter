@@ -1,8 +1,13 @@
 import { join } from 'node:path'
 import { app, BrowserWindow, nativeTheme, session } from 'electron'
+import { KeyService } from '@core/keys/service'
+import { KeyVault } from '@core/keys/vault'
+import { bundledCatalog } from '@core/providers/catalog'
+import { ProviderStore } from '@core/providers/store'
 import { redactError } from '@core/security/redact'
-import type { GatewayStatus, ThemePreference } from '@shared/ipc'
+import type { GatewayStatus, ProviderView, ThemePreference } from '@shared/ipc'
 import { openDatabase, SettingsStore, type Db } from './db'
+import { safeStorageEncryptor } from './encryptor'
 import { emit, handle } from './ipc'
 import { AppTray } from './tray'
 import { createMainWindow, isTrustedSender } from './window'
@@ -81,14 +86,41 @@ if (!app.requestSingleInstanceLock()) {
       return status
     }
 
-    handle('app:getInfo', isTrustedSender, () => ({
+    // ---- Providers & keys (M1) ----
+    const providers = new ProviderStore(db, bundledCatalog)
+    providers.seed()
+    const vault = new KeyVault(db, safeStorageEncryptor)
+    const keys = new KeyService(vault, providers, { fetch: (url, init) => fetch(url, init), timeoutMs: 10_000 })
+    const listProviders = (): ProviderView[] => providers.list((id) => vault.list(id))
+
+    handle('app:getInfo', isTrustedSender, async () => ({
       name: app.getName(),
       version: app.getVersion(),
       electron: process.versions.electron,
       platform: `${process.platform}-${process.arch}`,
       dataDir: app.getPath('userData'),
-      schemaVersion: opened.schemaVersion
+      schemaVersion: opened.schemaVersion,
+      encryptionAvailable: await vault.isAvailable()
     }))
+    handle('providers:list', isTrustedSender, listProviders)
+    handle('providers:setEnabled', isTrustedSender, (id, enabled) => {
+      providers.setEnabled(id, enabled)
+      return listProviders()
+    })
+    handle('providers:setLimitOverrides', isTrustedSender, (id, overrides) => {
+      providers.setLimitOverrides(id, overrides)
+      return listProviders()
+    })
+    handle('keys:add', isTrustedSender, (input) => keys.add(input))
+    handle('keys:test', isTrustedSender, (keyId) => keys.test(keyId))
+    handle('keys:setEnabled', isTrustedSender, (keyId, enabled) => {
+      vault.setEnabled(keyId, enabled)
+      return listProviders()
+    })
+    handle('keys:delete', isTrustedSender, (keyId) => {
+      vault.delete(keyId)
+      return listProviders()
+    })
     handle('gateway:getStatus', isTrustedSender, gatewayStatus)
     handle('gateway:setEnabled', isTrustedSender, setGatewayEnabled)
     handle('settings:getTheme', isTrustedSender, () => settings.get<ThemePreference>('ui.theme', 'dark'))
