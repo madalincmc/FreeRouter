@@ -141,6 +141,73 @@ export interface ModelTestResult {
   model: ModelView
 }
 
+// ---- Chat ----------------------------------------------------------------
+
+export interface ConversationSummary {
+  id: string
+  title: string
+  /** Picker value: 'auto', 'auto:coding', 'chain:<name>' or '<provider>/<model_id>'. */
+  model: string
+  privateMode: boolean
+  createdAt: number
+  updatedAt: number
+}
+
+export interface AttemptView {
+  provider: string
+  model: string
+  outcome: 'ok' | 'failed' | 'skipped' | 'mid_stream_error'
+  failure?: string
+  status?: number
+  message?: string
+  ms: number
+}
+
+export interface MessageMeta {
+  provider?: string
+  model?: string
+  /** What the user asked for when this reply was generated. */
+  requested?: string
+  attempts?: AttemptView[]
+  ttftMs?: number
+  latencyMs?: number
+  usage?: { prompt_tokens: number; completion_tokens: number; estimated: boolean }
+  reasoning?: string
+  error?: string
+  /** The reply was cut off after some output (PRD §6) – it can be continued. */
+  midStream?: boolean
+  /** Models that were used for earlier parts of a continued reply. */
+  continuedFrom?: string[]
+}
+
+export type MessageStatus = 'complete' | 'streaming' | 'error' | 'stopped'
+
+export interface ChatMessageView {
+  id: string
+  conversationId: string
+  role: 'user' | 'assistant'
+  content: string
+  status: MessageStatus
+  meta: MessageMeta
+  createdAt: number
+}
+
+export interface ConversationView extends ConversationSummary {
+  messages: ChatMessageView[]
+}
+
+export type ChatEvent =
+  | { type: 'start'; conversationId: string; messageId: string; provider: string; model: string; attempts: AttemptView[] }
+  | { type: 'delta'; conversationId: string; messageId: string; content: string; reasoning: string }
+  /** The final state of the message (complete, error or stopped). */
+  | { type: 'end'; conversationId: string; message: ChatMessageView }
+
+export interface ModelOptions {
+  virtual: { value: string; label: string; hint: string }[]
+  chains: string[]
+  models: { id: string; label: string; provider: string; tags: CapabilityTag[] }[]
+}
+
 // ---- Channels ------------------------------------------------------------
 
 export interface IpcContract {
@@ -167,6 +234,23 @@ export interface IpcContract {
   'models:test': { args: [modelId: string]; result: ModelTestResult }
   /** Requests sent today: per model, and per provider for account-wide limits (OpenRouter). */
   'models:usageToday': { args: []; result: { perModel: Record<string, number>; perProvider: Record<string, number> } }
+  'chat:list': { args: []; result: ConversationSummary[] }
+  'chat:get': { args: [conversationId: string]; result: ConversationView }
+  'chat:create': { args: []; result: ConversationSummary }
+  'chat:rename': { args: [conversationId: string, title: string]; result: ConversationSummary }
+  'chat:delete': { args: [conversationId: string]; result: boolean }
+  'chat:setOptions': {
+    args: [conversationId: string, options: { model?: string; privateMode?: boolean }]
+    result: ConversationSummary
+  }
+  /** Adds the user message and starts streaming the reply; events arrive on `chat:event`. */
+  'chat:send': { args: [conversationId: string, text: string]; result: { userMessage: ChatMessageView; assistantMessageId: string } }
+  /** Replaces the last reply, optionally with a different model or profile. */
+  'chat:regenerate': { args: [conversationId: string, model?: string]; result: { assistantMessageId: string } }
+  /** Continues a reply that was cut off, on a different model. */
+  'chat:continue': { args: [conversationId: string, messageId: string]; result: { assistantMessageId: string } }
+  'chat:stop': { args: [messageId: string]; result: boolean }
+  'chat:modelOptions': { args: []; result: ModelOptions }
 }
 
 export type IpcChannel = keyof IpcContract
@@ -176,6 +260,7 @@ export interface IpcEvents {
   'gateway:statusChanged': GatewayStatus
   /** The registry changed (sync finished, model tested); the renderer refetches. */
   'models:changed': { reason: 'sync' | 'test' | 'edit' }
+  'chat:event': ChatEvent
 }
 
 export type IpcEvent = keyof IpcEvents
@@ -205,7 +290,18 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'models:setEnabled',
   'models:setQuality',
   'models:test',
-  'models:usageToday'
+  'models:usageToday',
+  'chat:list',
+  'chat:get',
+  'chat:create',
+  'chat:rename',
+  'chat:delete',
+  'chat:setOptions',
+  'chat:send',
+  'chat:regenerate',
+  'chat:continue',
+  'chat:stop',
+  'chat:modelOptions'
 ] as const
 
-export const IPC_EVENTS: readonly IpcEvent[] = ['gateway:statusChanged', 'models:changed'] as const
+export const IPC_EVENTS: readonly IpcEvent[] = ['gateway:statusChanged', 'models:changed', 'chat:event'] as const

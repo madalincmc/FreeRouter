@@ -13,6 +13,9 @@ const limits = z.object({ rpm: limitValue, rpd: limitValue, tpm: limitValue, tpd
 /** Registry ids are `<provider>/<model_id>`; model ids can contain slashes and colons. */
 const modelId = z.string().min(3).max(256)
 const qualityValue = z.number().int().min(0).max(100).nullable().optional()
+const uuid = z.uuid()
+/** Model picker value: auto, auto:<profile>, chain:<name> or <provider>/<model_id>. */
+const pickerValue = z.string().min(1).max(256).regex(/^(auto(:[a-z]+)?|chain:[\w.-]+|[a-z0-9-]+\/.+)$/)
 
 /** Every channel's arguments are validated with Zod before the handler runs. */
 export const argSchemas: { [C in IpcChannel]: z.ZodType<IpcContract[C]['args']> } = {
@@ -53,7 +56,18 @@ export const argSchemas: { [C in IpcChannel]: z.ZodType<IpcContract[C]['args']> 
       .strict()
   ]),
   'models:test': z.tuple([modelId]),
-  'models:usageToday': z.tuple([])
+  'models:usageToday': z.tuple([]),
+  'chat:list': z.tuple([]),
+  'chat:get': z.tuple([uuid]),
+  'chat:create': z.tuple([]),
+  'chat:rename': z.tuple([uuid, z.string().max(200)]),
+  'chat:delete': z.tuple([uuid]),
+  'chat:setOptions': z.tuple([uuid, z.object({ model: pickerValue.optional(), privateMode: z.boolean().optional() }).strict()]),
+  'chat:send': z.tuple([uuid, z.string().min(1).max(500_000)]),
+  'chat:regenerate': z.union([z.tuple([uuid]), z.tuple([uuid, pickerValue]), z.tuple([uuid, z.undefined()])]),
+  'chat:continue': z.tuple([uuid, uuid]),
+  'chat:stop': z.tuple([uuid]),
+  'chat:modelOptions': z.tuple([])
 }
 
 export function handle<C extends IpcChannel>(

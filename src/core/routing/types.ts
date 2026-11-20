@@ -62,6 +62,8 @@ export interface RouteOptions {
   privateMode?: boolean
   /** Raises the minimum context window (PRD §8 x-fr-min-context). */
   minContext?: number
+  /** Registry ids never to try for this request (e.g. "continue with another model"). */
+  excludeModels?: string[]
   signal?: AbortSignal
 }
 

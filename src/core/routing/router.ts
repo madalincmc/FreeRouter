@@ -139,7 +139,8 @@ export class Router {
         health: this.d.health,
         cfg,
         opts,
-        rotation: this.rotation
+        rotation: this.rotation,
+        excludeModels: opts.excludeModels?.length ? new Set(opts.excludeModels) : undefined
       })
       candidates = ranking.candidates
       if (candidates.length === 0) {

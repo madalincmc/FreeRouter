@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Boxes, KeyRound, MessageSquare, Network, Settings as SettingsIcon, type LucideIcon } from 'lucide-react'
 import { useIpcQuery } from './lib/ipc'
+import { useChatEvents } from './chat/live'
 import { useNav, type Screen } from './store/nav'
 import { ChatScreen } from './screens/Chat'
 import { ModelsScreen } from './screens/Models'
@@ -42,6 +43,8 @@ export function App(): React.JSX.Element {
   const { screen, go } = useNav()
   const { data: gateway } = useIpcQuery('gateway:getStatus')
   useThemeClass()
+  // App-level so streams keep updating while another screen is open.
+  useChatEvents()
   const Current = SCREENS[screen]
 
   return (
@@ -77,7 +80,7 @@ export function App(): React.JSX.Element {
             : 'Gateway…'}
         </div>
       </nav>
-      <main className="min-w-0 flex-1 overflow-auto">
+      <main className={`min-w-0 flex-1 ${screen === 'chat' ? 'overflow-hidden' : 'overflow-auto'}`}>
         <Current />
       </main>
     </div>

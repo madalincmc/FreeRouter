@@ -44,6 +44,10 @@ resources/     icons (icon.png for app/installer, tray.png for the tray)
 - If `node_modules/electron/dist` is missing after an install, run `node node_modules/electron/install.js`.
 - Keep core DB logic driver-agnostic through the `SqlDatabase` interface in `core/db/migrate.ts`.
 
+- **Chat** (`core/chat/`). `ConversationStore` holds the SQLite history. `ChatService` drives the router: it coalesces deltas (30 ms) into `chat:event` IPC events and persists the final message. On startup, `recoverInterrupted()` marks replies left `streaming` as stopped. "Continue with another model" sends the partial reply plus `CONTINUE_PROMPT`, passes `excludeModels: [failedModel]`, and appends the continuation to the same message. In the renderer, `useChatEvents()` is mounted at the App level. Live text sits in a zustand store keyed by message id and is swapped for the final message when the `end` event arrives.
+- **Model output safety.** react-markdown never renders raw HTML. The CSP blocks remote images. Links open in the system browser.
+- **Dev end-to-end without keys.** Run `pnpm dev:fake`, then start the app with `FREEROUTER_DATA_DIR=<temp dir>` and `FREEROUTER_DEV_FAKE_PROVIDER=<FAKE_URL>` (see `src/main/devHooks.ts`). Both are ignored in packaged builds. Always use a separate data dir so the real profile isn't touched.
+
 ## Commands
 
 - `pnpm dev`: run the app with HMR

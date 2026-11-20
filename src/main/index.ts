@@ -13,18 +13,22 @@ import { HealthTracker } from '@core/routing/health'
 import { RequestLog } from '@core/routing/log'
 import { QuotaTracker } from '@core/routing/quota'
 import { Router } from '@core/routing/router'
+import { modelOptions } from '@core/chat/options'
+import { ChatService } from '@core/chat/service'
+import { ConversationStore } from '@core/chat/store'
 import { redactError } from '@core/security/redact'
 import type { GatewayStatus, ProviderView, ThemePreference } from '@shared/ipc'
 import { openDatabase, SettingsStore, type Db } from './db'
 import { safeStorageEncryptor } from './encryptor'
+import { devDataDir, ensureDevKey, withDevProvider } from './devHooks'
 import { emit, handle } from './ipc'
 import { AppTray } from './tray'
 import { createMainWindow, isTrustedSender } from './window'
 
 const DEFAULT_GATEWAY_PORT = 4141
 
-// All state lives in %APPDATA%/FreeRouter (PRD §10).
-app.setPath('userData', join(app.getPath('appData'), 'FreeRouter'))
+// All state lives in %APPDATA%/FreeRouter (PRD §10); dev builds may point elsewhere.
+app.setPath('userData', devDataDir() ?? join(app.getPath('appData'), 'FreeRouter'))
 app.setAppUserModelId('com.freerouter.desktop')
 
 if (!app.requestSingleInstanceLock()) {
@@ -68,7 +72,7 @@ if (!app.requestSingleInstanceLock()) {
   process.on('uncaughtException', (err) => console.error('[main] uncaught:', redactError(err)))
   process.on('unhandledRejection', (err) => console.error('[main] unhandled rejection:', redactError(err)))
 
-  void app.whenReady().then(() => {
+  void app.whenReady().then(async () => {
     // Deny every permission request (camera, mic, notifications…) – the renderer needs none.
     session.defaultSession.setPermissionRequestHandler((_wc, _perm, cb) => cb(false))
 
@@ -96,9 +100,11 @@ if (!app.requestSingleInstanceLock()) {
     }
 
     // ---- Providers & keys (M1) ----
-    const providers = new ProviderStore(db, bundledCatalog)
+    const catalog = withDevProvider(bundledCatalog)
+    const providers = new ProviderStore(db, catalog)
     providers.seed()
     const vault = new KeyVault(db, safeStorageEncryptor)
+    await ensureDevKey(vault, catalog)
     const httpFetch: FetchLike = (url, init) => fetch(url, init)
     const keys = new KeyService(vault, providers, { fetch: httpFetch, timeoutMs: 10_000 })
     const listProviders = (): ProviderView[] => providers.list((id) => vault.list(id))
@@ -129,7 +135,32 @@ if (!app.requestSingleInstanceLock()) {
       health: new HealthTracker(),
       fetch: httpFetch
     })
-    void router // wired into chat (M4) and the gateway (M5)
+    // ---- Chat (M4) ----
+    const conversations = new ConversationStore(db)
+    conversations.recoverInterrupted()
+    const chat = new ChatService({
+      store: conversations,
+      route: (req, opts) => router.route(req, opts),
+      emit: (e) => emit(mainWindow?.webContents, 'chat:event', e)
+    })
+    app.on('before-quit', () => chat.stopAll())
+    handle('chat:list', isTrustedSender, () => conversations.list())
+    handle('chat:get', isTrustedSender, (id) => conversations.get(id))
+    handle('chat:create', isTrustedSender, () => conversations.create())
+    handle('chat:rename', isTrustedSender, (id, title) => conversations.rename(id, title))
+    handle('chat:delete', isTrustedSender, (id) => {
+      for (const m of conversations.messages(id)) chat.stop(m.id)
+      return conversations.delete(id)
+    })
+    handle('chat:setOptions', isTrustedSender, (id, o) => conversations.setOptions(id, o))
+    handle('chat:send', isTrustedSender, (id, text) => chat.send(id, text))
+    handle('chat:regenerate', isTrustedSender, (id, model) => chat.regenerate(id, model))
+    handle('chat:continue', isTrustedSender, (id, messageId) => chat.continue(id, messageId))
+    handle('chat:stop', isTrustedSender, (messageId) => chat.stop(messageId))
+    handle('chat:modelOptions', isTrustedSender, () =>
+      modelOptions(registry.list(), listProviders(), chains.list().map((c) => c.name))
+    )
+
     // Metadata-only request log, kept 7 days by default (PRD §10).
     requestLog.prune(Date.now() - settings.get('log.retentionDays', 7) * 24 * 3600_000)
 

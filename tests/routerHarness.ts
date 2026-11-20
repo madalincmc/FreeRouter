@@ -1,3 +1,4 @@
+import { ConversationStore } from '@core/chat/store'
 import { KeyVault } from '@core/keys/vault'
 import type { FetchLike } from '@core/http'
 import { parseCatalog } from '@core/providers/catalog'
@@ -128,7 +129,9 @@ export async function makeHarness(o: HarnessOptions = {}) {
     return { events, text, start, done, error }
   }
 
-  return { fake, router, registry, vault, providers, quota, health, chains, requestLog, config, run, stop: () => fake.stop() }
+  const conversations = new ConversationStore(db)
+
+  return { fake, router, registry, vault, providers, quota, health, chains, requestLog, conversations, config, run, stop: () => fake.stop() }
 }
 
 export type Harness = Awaited<ReturnType<typeof makeHarness>>
