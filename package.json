@@ -5,6 +5,7 @@
   "private": true,
   "description": "Windows desktop orchestrator that routes requests across free hosted LLMs.",
   "author": "FreeRouter",
+  "license": "MIT",
   "main": "./out/main/index.js",
   "type": "module",
   "scripts": {

@@ -3,7 +3,7 @@
 A Windows Electron app that pools free hosted LLMs behind one router. It has two front doors, a chat UI and a local OpenAI-compatible gateway at `127.0.0.1:4141/v1`. No inference runs locally.
 
 - PRD: https://claude.ai/artifact/F6629dKfWfwb6KYBRovLqP (the Claude doc "PRD – Free Model Orchestrator")
-- Linear: project P-MAD-9, team MAD. There is one milestone per build step, M0–M6 (PRD §13). Build one milestone at a time.
+- The build ran in milestones M0–M6 (PRD §13), one at a time.
 
 ## Rules (non-negotiable)
 

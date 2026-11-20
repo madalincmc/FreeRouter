@@ -15,6 +15,7 @@ with a chat UI for you and an OpenAI-compatible gateway for your coding tools.
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-200%20passing-22C55E)
 ![Local first](https://img.shields.io/badge/keys-DPAPI%20encrypted-8B5CF6)
+![License: MIT](https://img.shields.io/badge/license-MIT-yellow)
 
 <img src="docs/screenshots/chat.png" alt="FreeRouter chat: a TypeScript answer from Gemini 3.6 Flash, picked automatically" width="900" />
 
@@ -179,6 +180,10 @@ tests/        Vitest suites, including a real HTTP fake provider for router scen
 
 `src/core` never imports Electron, and an architecture test enforces it. That keeps the router testable
 in plain Node, with scripted failures such as 429s, mid-stream breaks and slow first tokens.
+
+## License
+
+[MIT](LICENSE)
 
 ## Disclaimer
 
