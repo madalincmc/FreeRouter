@@ -1,0 +1,25 @@
+appId: com.freerouter.desktop
+productName: FreeRouter
+directories:
+  output: dist
+  buildResources: resources
+files:
+  - out/**
+  - resources/**
+  - package.json
+  - '!**/*.{map,md,ts,tsx}'
+asarUnpack:
+  - '**/*.node'
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: resources/icon.png
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+# better-sqlite3 ships N-API prebuilds that load in both Node and Electron; no rebuild needed
+# (and node-gyp source builds fail when the path contains a space).
+npmRebuild: false
