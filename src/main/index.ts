@@ -17,15 +17,16 @@ import { modelOptions } from '@core/chat/options'
 import { ChatService } from '@core/chat/service'
 import { ConversationStore } from '@core/chat/store'
 import { redactError } from '@core/security/redact'
-import type { GatewayStatus, ProviderView, ThemePreference } from '@shared/ipc'
+import type { ProviderView, ThemePreference } from '@shared/ipc'
+import { gatewayModels } from '@core/gateway/models'
+import { toGatewayView } from '@core/routing/log'
+import { GatewayController } from './gateway'
 import { openDatabase, SettingsStore, type Db } from './db'
 import { safeStorageEncryptor } from './encryptor'
 import { devDataDir, ensureDevKey, withDevProvider } from './devHooks'
 import { emit, handle } from './ipc'
 import { AppTray } from './tray'
 import { createMainWindow, isTrustedSender } from './window'
-
-const DEFAULT_GATEWAY_PORT = 4141
 
 // All state lives in %APPDATA%/FreeRouter (PRD §10); dev builds may point elsewhere.
 app.setPath('userData', devDataDir() ?? join(app.getPath('appData'), 'FreeRouter'))
@@ -80,24 +81,10 @@ if (!app.requestSingleInstanceLock()) {
     db = opened.db
     const settings = new SettingsStore(db)
 
-    const gatewayStatus = (): GatewayStatus => ({
-      enabled: settings.get('gateway.enabled', true),
-      port: settings.get('gateway.port', DEFAULT_GATEWAY_PORT),
-      running: false // the Fastify gateway arrives in M5
-    })
-
     const applyTheme = (theme: ThemePreference): void => {
       nativeTheme.themeSource = theme
     }
     applyTheme(settings.get<ThemePreference>('ui.theme', 'dark'))
-
-    const setGatewayEnabled = (enabled: boolean): GatewayStatus => {
-      settings.set('gateway.enabled', enabled)
-      const status = gatewayStatus()
-      tray?.refresh()
-      emit(mainWindow?.webContents, 'gateway:statusChanged', status)
-      return status
-    }
 
     // ---- Providers & keys (M1) ----
     const catalog = withDevProvider(bundledCatalog)
@@ -130,7 +117,10 @@ if (!app.requestSingleInstanceLock()) {
         modelsChanged('test')
       },
       chains: (name) => chains.get(name),
-      log: (e) => requestLog.write(e),
+      log: (e) => {
+        const id = requestLog.writeReturningId(e)
+        if (e.source === 'gateway') emit(mainWindow?.webContents, 'gateway:request', toGatewayView({ ...e, id }))
+      },
       quota,
       health: new HealthTracker(),
       fetch: httpFetch
@@ -160,6 +150,31 @@ if (!app.requestSingleInstanceLock()) {
     handle('chat:modelOptions', isTrustedSender, () =>
       modelOptions(registry.list(), listProviders(), chains.list().map((c) => c.name))
     )
+
+    // ---- Gateway (M5) – local OpenAI-compatible endpoint ----
+    const gateway = new GatewayController(
+      {
+        route: (req, opts) => router.route(req, opts),
+        listModels: () => gatewayModels(registry.list(), listProviders(), chains.list().map((c) => c.name)),
+        healthyCount: () => countRoutable(registry.list(), listProviders()),
+        allowedOrigins: () => settings.get<string[]>('gateway.allowedOrigins', []),
+        version: app.getVersion()
+      },
+      settings,
+      safeStorageEncryptor,
+      (status) => {
+        tray?.refresh()
+        emit(mainWindow?.webContents, 'gateway:statusChanged', status)
+      }
+    )
+    await gateway.init()
+    app.on('will-quit', () => void gateway.stop())
+    handle('gateway:getStatus', isTrustedSender, () => gateway.status())
+    handle('gateway:setEnabled', isTrustedSender, (enabled) => gateway.setEnabled(enabled))
+    handle('gateway:setPort', isTrustedSender, (port) => gateway.setPort(port))
+    handle('gateway:getToken', isTrustedSender, () => gateway.getToken())
+    handle('gateway:regenerateToken', isTrustedSender, () => gateway.regenerateToken())
+    handle('gateway:recentRequests', isTrustedSender, (limit) => requestLog.recentGateway(limit))
 
     // Metadata-only request log, kept 7 days by default (PRD §10).
     requestLog.prune(Date.now() - settings.get('log.retentionDays', 7) * 24 * 3600_000)
@@ -222,8 +237,6 @@ if (!app.requestSingleInstanceLock()) {
       modelsChanged('test')
       return r
     })
-    handle('gateway:getStatus', isTrustedSender, gatewayStatus)
-    handle('gateway:setEnabled', isTrustedSender, setGatewayEnabled)
     handle('settings:getTheme', isTrustedSender, () => settings.get<ThemePreference>('ui.theme', 'dark'))
     handle('settings:setTheme', isTrustedSender, (theme) => {
       applyTheme(theme)
@@ -232,9 +245,9 @@ if (!app.requestSingleInstanceLock()) {
 
     tray = new AppTray(join(resourcesDir, 'tray.png'), {
       open: showWindow,
-      toggleGateway: () => setGatewayEnabled(!gatewayStatus().enabled),
+      toggleGateway: () => void gateway.setEnabled(!gateway.status().enabled),
       quit: () => app.quit(),
-      gatewayStatus,
+      gatewayStatus: () => gateway.status(),
       healthyModelCount: () => countRoutable(registry.list(), listProviders())
     })
 

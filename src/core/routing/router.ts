@@ -9,6 +9,7 @@ import type { HealthTracker } from './health'
 import { parseModelField, requestNeeds, UnknownModelError, type RequestNeeds } from './intent'
 import type { QuotaTracker } from './quota'
 import type { RequestLogEntry } from './log'
+import { buildUpstreamBody, ChunkNormalizer } from './normalize'
 import { readSse } from './sse'
 import {
   DEFAULT_ROUTER_CONFIG,
@@ -238,9 +239,9 @@ export class Router {
       message: abortReason === 'ttft' ? `no first token within ${cfg.ttftTimeoutMs} ms` : `exceeded ${cfg.totalTimeoutMs} ms`
     })
 
-    // Our routing fields never reach the provider.
-    const { model: _model, stream: _stream, ...rest } = req
-    const body = JSON.stringify({ ...rest, model: c.model.modelId, stream: true })
+    // Routing fields replaced and provider-rejected parameters stripped (profile data).
+    const body = JSON.stringify(buildUpstreamBody(req, profile, c.model.modelId))
+    const normalizer = new ChunkNormalizer()
 
     let res: HttpResponse
     try {
@@ -323,6 +324,7 @@ export class Router {
           throw new Error(message)
         }
         if (!Array.isArray(chunk.choices)) continue
+        normalizer.normalize(chunk)
         track(chunk)
         if (!started) {
           buffered.push(chunk)

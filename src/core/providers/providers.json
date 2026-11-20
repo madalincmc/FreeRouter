@@ -12,9 +12,18 @@
       "mayTrainOnData": true,
       "limitScope": "account",
       "keyRotation": false,
-      "limits": { "rpm": 20, "rpd": 50 },
+      "limits": {
+        "rpm": 20,
+        "rpd": 50
+      },
       "notes": "Only :free models count. 50 requests/day account-wide, or 1,000/day after a one-time purchase of 10 credits. A negative balance returns 402 even on free models. Extra keys do not add capacity.",
-      "validation": { "url": "https://openrouter.ai/api/v1/key", "invalidStatuses": [401, 403] },
+      "validation": {
+        "url": "https://openrouter.ai/api/v1/key",
+        "invalidStatuses": [
+          401,
+          403
+        ]
+      },
       "models": {
         "url": "https://openrouter.ai/api/v1/models",
         "auth": "none",
@@ -28,7 +37,13 @@
           "outputModalities": "architecture.output_modalities",
           "supportedParameters": "supported_parameters"
         },
-        "free": { "idSuffix": ":free", "zeroPricePaths": ["pricing.prompt", "pricing.completion"] },
+        "free": {
+          "idSuffix": ":free",
+          "zeroPricePaths": [
+            "pricing.prompt",
+            "pricing.completion"
+          ]
+        },
         "exclude": []
       }
     },
@@ -42,9 +57,18 @@
       "mayTrainOnData": false,
       "limitScope": "organization",
       "keyRotation": true,
-      "limits": { "rpm": 30, "rpd": 1000 },
+      "limits": {
+        "rpm": 30,
+        "rpd": 1000
+      },
       "notes": "Limits are per model and returned in x-ratelimit-* headers. Very fast.",
-      "validation": { "url": "https://api.groq.com/openai/v1/models", "invalidStatuses": [401, 403] },
+      "validation": {
+        "url": "https://api.groq.com/openai/v1/models",
+        "invalidStatuses": [
+          401,
+          403
+        ]
+      },
       "models": {
         "auth": "required",
         "listPath": "data",
@@ -54,9 +78,28 @@
           "maxOutput": "max_completion_tokens",
           "active": "active"
         },
-        "free": { "all": true },
-        "exclude": ["whisper", "tts", "playai", "orpheus", "guard", "safeguard", "compound"],
-        "defaultTags": ["fast"]
+        "free": {
+          "all": true
+        },
+        "exclude": [
+          "whisper",
+          "tts",
+          "playai",
+          "orpheus",
+          "guard",
+          "safeguard",
+          "compound"
+        ],
+        "defaultTags": [
+          "fast"
+        ]
+      },
+      "request": {
+        "stripParams": [
+          "logprobs",
+          "top_logprobs",
+          "logit_bias"
+        ]
       }
     },
     {
@@ -69,11 +112,18 @@
       "mayTrainOnData": true,
       "limitScope": "project",
       "keyRotation": true,
-      "limits": { "rpm": 10, "rpd": 250 },
+      "limits": {
+        "rpm": 10,
+        "rpd": 250
+      },
       "notes": "Limits are per model and per Google Cloud project. Flash-class models are the free workhorses. Free-tier prompts may be used for training.",
       "validation": {
         "url": "https://generativelanguage.googleapis.com/v1beta/openai/models",
-        "invalidStatuses": [400, 401, 403]
+        "invalidStatuses": [
+          400,
+          401,
+          403
+        ]
       },
       "models": {
         "url": "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000",
@@ -88,9 +138,36 @@
           "reasoningFlag": "thinking"
         },
         "idStrip": "^models/",
-        "require": [{ "path": "supportedGenerationMethods", "includes": "generateContent" }],
-        "free": { "all": true },
-        "exclude": ["embed", "tts", "imagen", "veo", "aqa", "image", "live", "native-audio", "learnlm", "robotics", "computer-use"]
+        "require": [
+          {
+            "path": "supportedGenerationMethods",
+            "includes": "generateContent"
+          }
+        ],
+        "free": {
+          "all": true
+        },
+        "exclude": [
+          "embed",
+          "tts",
+          "imagen",
+          "veo",
+          "aqa",
+          "image",
+          "live",
+          "native-audio",
+          "learnlm",
+          "robotics",
+          "computer-use"
+        ]
+      },
+      "request": {
+        "stripParams": [
+          "logit_bias",
+          "parallel_tool_calls",
+          "logprobs",
+          "top_logprobs"
+        ]
       }
     },
     {
@@ -103,16 +180,39 @@
       "mayTrainOnData": false,
       "limitScope": "organization",
       "keyRotation": true,
-      "limits": { "rpm": 30, "tpd": 1000000 },
+      "limits": {
+        "rpm": 30,
+        "tpd": 1000000
+      },
       "notes": "Very high throughput. The free tier has a reduced context window.",
-      "validation": { "url": "https://api.cerebras.ai/v1/models", "invalidStatuses": [401, 403] },
+      "validation": {
+        "url": "https://api.cerebras.ai/v1/models",
+        "invalidStatuses": [
+          401,
+          403
+        ]
+      },
       "models": {
         "auth": "required",
         "listPath": "data",
-        "fields": { "id": "id" },
-        "free": { "all": true },
+        "fields": {
+          "id": "id"
+        },
+        "free": {
+          "all": true
+        },
         "exclude": [],
-        "defaultTags": ["fast"]
+        "defaultTags": [
+          "fast"
+        ]
+      },
+      "request": {
+        "stripParams": [
+          "logit_bias",
+          "parallel_tool_calls",
+          "logprobs",
+          "top_logprobs"
+        ]
       }
     },
     {
@@ -124,9 +224,17 @@
       "mayTrainOnData": true,
       "limitScope": "organization",
       "keyRotation": true,
-      "limits": { "rpm": 60 },
+      "limits": {
+        "rpm": 60
+      },
       "notes": "Free (Experiment) plan with account-specific limits; data may be used for training unless opted out. EU hosting. Codestral is good for code.",
-      "validation": { "url": "https://api.mistral.ai/v1/models", "invalidStatuses": [401, 403] },
+      "validation": {
+        "url": "https://api.mistral.ai/v1/models",
+        "invalidStatuses": [
+          401,
+          403
+        ]
+      },
       "models": {
         "auth": "required",
         "listPath": "data",
@@ -138,8 +246,24 @@
           "visionFlag": "capabilities.vision",
           "chatFlag": "capabilities.completion_chat"
         },
-        "free": { "all": true },
-        "exclude": ["embed", "moderation", "ocr", "transcribe", "voxtral"]
+        "free": {
+          "all": true
+        },
+        "exclude": [
+          "embed",
+          "moderation",
+          "ocr",
+          "transcribe",
+          "voxtral"
+        ]
+      },
+      "request": {
+        "stripParams": [
+          "logit_bias",
+          "logprobs",
+          "top_logprobs",
+          "user"
+        ]
       }
     }
   ]

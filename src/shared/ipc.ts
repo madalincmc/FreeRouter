@@ -16,7 +16,24 @@ export interface AppInfo {
 export interface GatewayStatus {
   enabled: boolean
   port: number
-  running: boolean // false until M5 implements the gateway
+  running: boolean
+  /** Why it isn't running (e.g. port in use). */
+  error: string | null
+  baseUrl: string
+}
+
+/** One gateway request as shown in the live log (metadata only). */
+export interface GatewayRequestView {
+  id: number
+  ts: number
+  client: string | null
+  requestedModel: string
+  chosenModel: string | null
+  status: string
+  latencyMs: number | null
+  ttftMs: number | null
+  attempts: number
+  error: string | null
 }
 
 export type ThemePreference = 'dark' | 'light' | 'system'
@@ -214,6 +231,11 @@ export interface IpcContract {
   'app:getInfo': { args: []; result: AppInfo }
   'gateway:getStatus': { args: []; result: GatewayStatus }
   'gateway:setEnabled': { args: [enabled: boolean]; result: GatewayStatus }
+  'gateway:setPort': { args: [port: number]; result: GatewayStatus }
+  /** The local gateway token (not a provider key) – shown so it can be pasted into tools. */
+  'gateway:getToken': { args: []; result: string }
+  'gateway:regenerateToken': { args: []; result: string }
+  'gateway:recentRequests': { args: [limit: number]; result: GatewayRequestView[] }
   'settings:getTheme': { args: []; result: ThemePreference }
   'settings:setTheme': { args: [theme: ThemePreference]; result: ThemePreference }
   'providers:list': { args: []; result: ProviderView[] }
@@ -258,6 +280,8 @@ export type IpcChannel = keyof IpcContract
 /** Events pushed from main to renderer. */
 export interface IpcEvents {
   'gateway:statusChanged': GatewayStatus
+  /** A gateway request finished (live log). */
+  'gateway:request': GatewayRequestView
   /** The registry changed (sync finished, model tested); the renderer refetches. */
   'models:changed': { reason: 'sync' | 'test' | 'edit' }
   'chat:event': ChatEvent
@@ -275,6 +299,10 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'app:getInfo',
   'gateway:getStatus',
   'gateway:setEnabled',
+  'gateway:setPort',
+  'gateway:getToken',
+  'gateway:regenerateToken',
+  'gateway:recentRequests',
   'settings:getTheme',
   'settings:setTheme',
   'providers:list',
@@ -304,4 +332,4 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'chat:modelOptions'
 ] as const
 
-export const IPC_EVENTS: readonly IpcEvent[] = ['gateway:statusChanged', 'models:changed', 'chat:event'] as const
+export const IPC_EVENTS: readonly IpcEvent[] = ['gateway:statusChanged', 'gateway:request', 'models:changed', 'chat:event'] as const

@@ -45,6 +45,15 @@ resources/     icons (icon.png for app/installer, tray.png for the tray)
 - Keep core DB logic driver-agnostic through the `SqlDatabase` interface in `core/db/migrate.ts`.
 
 - **Chat** (`core/chat/`). `ConversationStore` holds the SQLite history. `ChatService` drives the router: it coalesces deltas (30 ms) into `chat:event` IPC events and persists the final message. On startup, `recoverInterrupted()` marks replies left `streaming` as stopped. "Continue with another model" sends the partial reply plus `CONTINUE_PROMPT`, passes `excludeModels: [failedModel]`, and appends the continuation to the same message. In the renderer, `useChatEvents()` is mounted at the App level. Live text sits in a zustand store keyed by message id and is swapped for the final message when the `end` event arrives.
+- **Gateway** (`core/gateway/`, controller in `main/gateway.ts`).
+  - It's Fastify, bound to `127.0.0.1` only.
+  - The `onRequest` hook checks Host (DNS rebinding), then Origin (403 unless allow-listed in `gateway.allowedOrigins`), then the `fr-local-…` token on `/v1/*` (401). It accepts `Bearer` or `x-api-key`. The token is stored encrypted with safeStorage under `gateway.tokenEnc`.
+  - Streaming responses hijack the reply and write headers only on the router's `start` event. So `x-fr-provider`, `x-fr-model` and `x-fr-attempts` are real, and failures before the first token return a proper HTTP error instead of a 200 stream. A mid-stream failure becomes `data: {"error":…}` and the stream ends.
+  - Non-streaming responses are aggregated with `CompletionAggregator`.
+  - A client disconnect aborts the upstream call.
+- **Normalisation** (`core/routing/normalize.ts`) runs inside the router, so chat benefits too:
+  - `buildUpstreamBody` removes `GLOBAL_STRIP_PARAMS` and each profile's `request.stripParams`. That list is best-effort data; a 400 still fails over.
+  - `ChunkNormalizer` fixes tool-call deltas (index, id, type, string arguments) and finish reasons.
 - **Model output safety.** react-markdown never renders raw HTML. The CSP blocks remote images. Links open in the system browser.
 - **Dev end-to-end without keys.** Run `pnpm dev:fake`, then start the app with `FREEROUTER_DATA_DIR=<temp dir>` and `FREEROUTER_DEV_FAKE_PROVIDER=<FAKE_URL>` (see `src/main/devHooks.ts`). Both are ignored in packaged builds. Always use a separate data dir so the real profile isn't touched.
 

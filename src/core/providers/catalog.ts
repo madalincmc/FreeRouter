@@ -88,7 +88,9 @@ export const ProviderProfileSchema = z
         headers: z.record(z.string(), z.string()).optional()
       })
       .strict(),
-    models: ModelsSpecSchema
+    models: ModelsSpecSchema,
+    /** Request quirks: parameters this provider rejects are removed before sending (PRD §8). */
+    request: z.object({ stripParams: z.array(z.string()) }).strict().optional()
   })
   .strict()
 

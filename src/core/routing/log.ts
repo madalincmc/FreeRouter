@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3'
+import type { GatewayRequestView } from '@shared/ipc'
 import type { Attempt } from './types'
 
 /** One row of `request_log`: metadata only, never prompt or response bodies (PRD §10). */
@@ -15,6 +16,21 @@ export interface RequestLogEntry {
   promptTokens: number | null
   completionTokens: number | null
   error: string | null
+}
+
+export function toGatewayView(e: RequestLogEntry & { id: number }): GatewayRequestView {
+  return {
+    id: e.id,
+    ts: e.ts,
+    client: e.clientUa,
+    requestedModel: e.requestedModel,
+    chosenModel: e.chosenModel,
+    status: e.status,
+    latencyMs: e.latencyMs,
+    ttftMs: e.ttftMs,
+    attempts: e.attempts.filter((a) => a.outcome !== 'skipped').length,
+    error: e.error
+  }
 }
 
 export class RequestLog {
@@ -62,6 +78,20 @@ export class RequestLog {
         completionTokens: r['completion_tokens'] as number | null,
         error: r['error'] as string | null
       }))
+  }
+
+  /** Latest rows from one front door, shaped for the live log. */
+  recentGateway(limit = 100): GatewayRequestView[] {
+    return this.recent(Math.max(limit * 3, limit))
+      .filter((e) => e.source === 'gateway')
+      .slice(0, limit)
+      .map(toGatewayView)
+  }
+
+  /** Writes a row and returns its id. */
+  writeReturningId(e: RequestLogEntry): number {
+    this.write(e)
+    return Number((this.db.prepare('SELECT last_insert_rowid() AS id').get() as { id: number }).id)
   }
 
   /** Retention (default 7 days handled by the caller's setting). */
