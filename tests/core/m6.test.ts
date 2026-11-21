@@ -92,7 +92,7 @@ describe('AppSettingsStore', () => {
     const s = new AppSettingsStore(backend()).get()
     expect(s.routing).toEqual(DEFAULT_ROUTING)
     expect(s.routing.weights).toEqual({ quality: 0.55, reliability: 0.2, speed: 0.15, headroom: 0.1 })
-    expect(s).toMatchObject({ privateMode: false, logRetentionDays: 7, launchAtLogin: false, startMinimized: false, gatewayAllowedOrigins: [], autoUpdate: true })
+    expect(s).toMatchObject({ privateMode: false, logRetentionDays: 7, launchAtLogin: false, startMinimized: false, gatewayAllowedOrigins: [], autoUpdate: true, colorScheme: 'indigo' })
   })
 
   it('normalises weights, clamps maxPerProvider, and feeds the router config', () => {
@@ -108,6 +108,14 @@ describe('AppSettingsStore', () => {
     const store = new AppSettingsStore(backend())
     store.update({ privateMode: true, startMinimized: true })
     expect(store.update({ logRetentionDays: 30 })).toMatchObject({ privateMode: true, startMinimized: true, logRetentionDays: 30 })
+  })
+
+  it('stores the colour scheme, and falls back to indigo for a scheme this version does not know', () => {
+    const b = backend()
+    const store = new AppSettingsStore(b)
+    expect(store.update({ colorScheme: 'ocean' }).colorScheme).toBe('ocean')
+    b.data.set('ui.colorScheme', 'some-future-scheme')
+    expect(store.get().colorScheme).toBe('indigo')
   })
 
   it('zero weights fall back to defaults', () => {

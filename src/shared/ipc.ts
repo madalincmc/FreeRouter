@@ -38,6 +38,10 @@ export interface GatewayRequestView {
 
 export type ThemePreference = 'dark' | 'light' | 'system'
 
+/** Accent and neutral palette, independent of light/dark. `indigo` is the original look. */
+export const COLOR_SCHEMES = ['indigo', 'ocean'] as const
+export type ColorScheme = (typeof COLOR_SCHEMES)[number]
+
 /**
  * Auto-update lifecycle. `disabled` means a dev or unpacked build that can't update;
  * `ready` means an update was downloaded and installs on restart or quit.
@@ -268,6 +272,7 @@ export interface AppSettings {
   gatewayAllowedOrigins: string[]
   /** Check GitHub Releases for updates in the background (packaged builds only). */
   autoUpdate: boolean
+  colorScheme: ColorScheme
 }
 
 export interface ChainView {

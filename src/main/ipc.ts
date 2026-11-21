@@ -1,7 +1,7 @@
 import { ipcMain, type IpcMainInvokeEvent, type WebContents } from 'electron'
 import { z } from 'zod'
 import { redact } from '@core/security/redact'
-import type { IpcChannel, IpcContract, IpcEvent, IpcEvents } from '@shared/ipc'
+import { COLOR_SCHEMES, type IpcChannel, type IpcContract, type IpcEvent, type IpcEvents } from '@shared/ipc'
 
 type Handler<C extends IpcChannel> = (
   ...args: IpcContract[C]['args']
@@ -98,7 +98,8 @@ export const argSchemas: { [C in IpcChannel]: z.ZodType<IpcContract[C]['args']> 
         launchAtLogin: z.boolean().optional(),
         startMinimized: z.boolean().optional(),
         gatewayAllowedOrigins: z.array(z.string().regex(/^https?:\/\/[^\s/]+$/)).max(20).optional(),
-        autoUpdate: z.boolean().optional()
+        autoUpdate: z.boolean().optional(),
+        colorScheme: z.enum(COLOR_SCHEMES).optional()
       })
       .strict()
   ]),

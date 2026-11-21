@@ -37,6 +37,12 @@ function useThemeClass(): void {
     mq.addEventListener('change', apply)
     return () => mq.removeEventListener('change', apply)
   }, [theme])
+
+  const { data: settings } = useIpcQuery('settings:get')
+  const scheme = settings?.colorScheme ?? 'indigo'
+  useEffect(() => {
+    document.documentElement.dataset.scheme = scheme
+  }, [scheme])
 }
 
 export function App(): React.JSX.Element {

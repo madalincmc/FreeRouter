@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, GripVertical, Plus, Trash2, X } from 'lucide-react'
-import type { AppSettings, ChainView, ModelOptions, RoutingSettings, ThemePreference, UpdateStatus } from '@shared/ipc'
+import type { AppSettings, ChainView, ColorScheme, ModelOptions, RoutingSettings, ThemePreference, UpdateStatus } from '@shared/ipc'
 import { Badge, Button, Card, Page, Row, TextInput, Toggle } from '../components/ui'
 import { invoke, useIpcEvent, useIpcMutation, useIpcQuery } from '../lib/ipc'
 
 const THEMES: ThemePreference[] = ['dark', 'light', 'system']
+
+/** Swatches preview each scheme's accents (light, dark) and dark background; keep in sync with index.css. */
+const SCHEMES: { id: ColorScheme; label: string; swatches: string[] }[] = [
+  { id: 'indigo', label: 'Indigo', swatches: ['#5b5bd6', '#7c7cf0', '#12151c'] },
+  { id: 'ocean', label: 'Ocean', swatches: ['#0e7490', '#22d3ee', '#0b1c21'] }
+]
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
@@ -79,20 +85,50 @@ export function SettingsScreen() {
         {settings && <UpdatesCard autoUpdate={settings.autoUpdate} onToggle={(v) => update.mutate({ autoUpdate: v })} />}
 
         <Card title="Appearance">
-          <div className="inline-flex rounded-md border border-border bg-panel-2 p-0.5" role="radiogroup">
-            {THEMES.map((t) => (
-              <button
-                key={t}
-                type="button"
-                role="radio"
-                aria-checked={theme === t}
-                onClick={() => setTheme.mutate([t])}
-                className={`rounded px-3 py-1 text-sm capitalize ${theme === t ? 'bg-panel font-medium shadow-sm' : 'text-muted hover:text-fg'}`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
+          <Field label="Theme" hint="System follows Windows’ light or dark setting.">
+            <div className="inline-flex rounded-md border border-border bg-panel-2 p-0.5" role="radiogroup" aria-label="Theme">
+              {THEMES.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  role="radio"
+                  aria-checked={theme === t}
+                  onClick={() => setTheme.mutate([t])}
+                  className={`rounded px-3 py-1 text-sm capitalize ${theme === t ? 'bg-panel font-medium shadow-sm' : 'text-muted hover:text-fg'}`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </Field>
+          {settings && (
+            <Field label="Colour scheme" hint="Accent and background colours. Works with every theme.">
+              <div className="flex gap-2" role="radiogroup" aria-label="Colour scheme">
+                {SCHEMES.map((s) => {
+                  const active = settings.colorScheme === s.id
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      onClick={() => update.mutate({ colorScheme: s.id })}
+                      className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm ${
+                        active ? 'border-accent bg-panel-2 font-medium' : 'border-border text-muted hover:text-fg'
+                      }`}
+                    >
+                      <span className="flex -space-x-1" aria-hidden>
+                        {s.swatches.map((c) => (
+                          <span key={c} className="h-3.5 w-3.5 rounded-full border border-border" style={{ background: c }} />
+                        ))}
+                      </span>
+                      {s.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </Field>
+          )}
         </Card>
 
         <Card title="About">

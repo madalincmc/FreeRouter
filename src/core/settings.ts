@@ -1,4 +1,4 @@
-import type { AppSettings, RoutingSettings } from '@shared/ipc'
+import { COLOR_SCHEMES, type AppSettings, type ColorScheme, type RoutingSettings } from '@shared/ipc'
 import { DEFAULT_ROUTER_CONFIG, type RouterConfig } from './routing/types'
 
 /** Minimal key/value interface (SettingsStore in main, a Map in tests). */
@@ -25,8 +25,14 @@ const KEYS = {
   launchAtLogin: 'app.launchAtLogin',
   startMinimized: 'app.startMinimized',
   gatewayAllowedOrigins: 'gateway.allowedOrigins',
-  autoUpdate: 'app.autoUpdate'
+  autoUpdate: 'app.autoUpdate',
+  colorScheme: 'ui.colorScheme'
 } as const
+
+/** A scheme stored by another version (e.g. one later removed) falls back to the default. */
+function knownScheme(s: string): ColorScheme {
+  return (COLOR_SCHEMES as readonly string[]).includes(s) ? (s as ColorScheme) : 'indigo'
+}
 
 /** Normalises weights to sum to 1 (the UI edits them as relative values). */
 export function normalizeWeights(w: RoutingSettings['weights']): RoutingSettings['weights'] {
@@ -49,7 +55,8 @@ export class AppSettingsStore {
       launchAtLogin: this.b.get(KEYS.launchAtLogin, false),
       startMinimized: this.b.get(KEYS.startMinimized, false),
       gatewayAllowedOrigins: this.b.get<string[]>(KEYS.gatewayAllowedOrigins, []),
-      autoUpdate: this.b.get(KEYS.autoUpdate, true)
+      autoUpdate: this.b.get(KEYS.autoUpdate, true),
+      colorScheme: knownScheme(this.b.get<string>(KEYS.colorScheme, 'indigo'))
     }
   }
 
@@ -62,7 +69,7 @@ export class AppSettingsStore {
       routing.maxPerProvider = Math.min(routing.maxPerProvider, routing.topN)
       this.b.set(KEYS.routing, routing)
     }
-    for (const k of ['privateMode', 'logRetentionDays', 'launchAtLogin', 'startMinimized', 'gatewayAllowedOrigins', 'autoUpdate'] as const) {
+    for (const k of ['privateMode', 'logRetentionDays', 'launchAtLogin', 'startMinimized', 'gatewayAllowedOrigins', 'autoUpdate', 'colorScheme'] as const) {
       if (patch[k] !== undefined) this.b.set(KEYS[k], patch[k])
     }
     return this.get()

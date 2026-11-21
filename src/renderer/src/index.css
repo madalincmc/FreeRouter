@@ -47,6 +47,39 @@
   --err: #f87171;
 }
 
+/*
+ * Colour schemes (Settings → Appearance), set as data-scheme on <html>. Each scheme defines the full
+ * token set for light and for dark. Both selectors have the same specificity, and dark comes second,
+ * so dark wins when both match. `indigo` is the default palette above.
+ */
+:root[data-scheme='ocean'] {
+  --bg: #f2f8f9;
+  --panel: #ffffff;
+  --panel-2: #e4f0f2;
+  --border: #cde0e4;
+  --fg: #0b1b1f;
+  --muted: #4c6a71;
+  --accent: #0e7490;
+  --accent-fg: #ffffff;
+  --ok: #15803d;
+  --warn: #b45309;
+  --err: #dc2626;
+}
+
+.dark[data-scheme='ocean'] {
+  --bg: #061317;
+  --panel: #0b1c21;
+  --panel-2: #10262c;
+  --border: #1c3a41;
+  --fg: #e2f1f3;
+  --muted: #83a4ab;
+  --accent: #22d3ee;
+  --accent-fg: #061317;
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --err: #f87171;
+}
+
 html,
 body,
 #root {
