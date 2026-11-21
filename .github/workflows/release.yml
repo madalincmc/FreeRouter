@@ -1,6 +1,6 @@
 # Builds the Windows installer and publishes it as a GitHub Release when a version tag is pushed.
 # Release flow: bump "version" in package.json, commit, `git tag v<version>`, `git push --follow-tags`.
-# electron-updater in installed copies then picks the release up from latest.yml.
+# Installed copies then pick the release up through latest.yml (electron-updater).
 name: Release
 
 on:
@@ -39,7 +39,20 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
 
-      - name: Build and publish
-        run: pnpm release
+      # electron-builder only builds here (--publish never). Its own GitHub publisher ran two
+      # uploaders concurrently and created two releases for one tag, so gh uploads all three files
+      # to a single release instead. The `publish` block in electron-builder.yml is still needed:
+      # it produces app-update.yml (the feed URL inside the app) and latest.yml.
+      - name: Build
+        run: pnpm package
+
+      - name: Publish release
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" --title "$v" --generate-notes \
+            "dist/FreeRouter-Setup-$v.exe" \
+            "dist/FreeRouter-Setup-$v.exe.blockmap" \
+            "dist/latest.yml"

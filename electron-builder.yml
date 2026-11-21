@@ -33,8 +33,8 @@ nsis:
   createStartMenuShortcut: true
   shortcutName: FreeRouter
   runAfterFinish: true
-# Auto-update feed. electron-builder writes app-update.yml into the app from this, and
-# `--publish always` uploads the installer, its .blockmap and latest.yml to a GitHub Release.
+# Auto-update feed. electron-builder writes app-update.yml into the app and latest.yml into
+# dist/ from this block; the release workflow uploads them with gh (see release.yml).
 # electron-updater needs the releases to be publicly readable (no token ships in the app).
 publish:
   provider: github
