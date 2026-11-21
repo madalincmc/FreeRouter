@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "limitsNote": "Seed values from the PRD (Nov 2026). Free-tier limits change often: rate-limit headers override them at runtime and users can override them in Settings.",
   "providers": [
     {
@@ -342,6 +342,199 @@
           "logit_bias",
           "logprobs",
           "top_logprobs"
+        ]
+      }
+    },
+    {
+      "id": "cloudflare",
+      "name": "Cloudflare Workers AI",
+      "baseUrl": "https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/v1",
+      "keyUrl": "https://dash.cloudflare.com/profile/api-tokens",
+      "docsUrl": "https://developers.cloudflare.com/workers-ai/platform/pricing/",
+      "termsUrl": "https://www.cloudflare.com/terms/",
+      "credential": {
+        "parts": [
+          "accountId",
+          "token"
+        ],
+        "separator": ":",
+        "hint": "ACCOUNT_ID:API_TOKEN"
+      },
+      "mayTrainOnData": false,
+      "limitScope": "account",
+      "keyRotation": false,
+      "limits": {
+        "rpm": 300
+      },
+      "notes": "Free plan: 10,000 Neurons/day per account (resets 00:00 UTC), shared by all models; big models use it up much faster. Enter the key as ACCOUNT_ID:API_TOKEN, using a token with Workers AI permissions. Models that need the Workers Paid plan are skipped automatically. Don't upgrade to Workers Paid just for this: usage past the free allocation is then billed.",
+      "validation": {
+        "url": "https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/models/search?per_page=1",
+        "invalidStatuses": [
+          400,
+          401,
+          403,
+          404
+        ]
+      },
+      "models": {
+        "url": "https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/models/search?task=Text%20Generation&per_page=200",
+        "auth": "required",
+        "listPath": "result",
+        "fields": {
+          "id": "name"
+        },
+        "free": {
+          "all": true
+        },
+        "exclude": [
+          "lora",
+          "guard"
+        ]
+      },
+      "request": {
+        "stripParams": [
+          "logit_bias",
+          "logprobs",
+          "top_logprobs",
+          "parallel_tool_calls",
+          "user"
+        ]
+      },
+      "errors": {
+        "unavailable": [
+          "\"code\"\\s*:\\s*5035",
+          "requires a Workers Paid plan",
+          "not available on the Workers Free plan",
+          "\"code\"\\s*:\\s*5016",
+          "submit the prompt 'agree'"
+        ]
+      }
+    },
+    {
+      "id": "zai",
+      "name": "Z.ai (GLM)",
+      "baseUrl": "https://api.z.ai/api/paas/v4",
+      "keyUrl": "https://z.ai/manage-apikey/apikey-list",
+      "docsUrl": "https://docs.z.ai/guides/overview/pricing",
+      "termsUrl": "https://docs.z.ai/legal-agreement/terms-of-use",
+      "mayTrainOnData": true,
+      "limitScope": "account",
+      "keyRotation": false,
+      "limits": {
+        "rpm": 20
+      },
+      "notes": "Only the free Flash models are used (GLM-4.7-Flash, GLM-4.5-Flash, GLM-4.6V-Flash). Z.ai doesn't publish free-tier limits and allows very few concurrent requests, so expect 429s under load. Data-use terms unverified, so treated as may-train. Operated from Singapore by Zhipu AI.",
+      "validation": {
+        "url": "https://api.z.ai/api/paas/v4/chat/completions",
+        "method": "POST",
+        "body": {
+          "model": "glm-4.5-flash",
+          "messages": [
+            {
+              "role": "user",
+              "content": "hi"
+            }
+          ],
+          "max_tokens": 1
+        },
+        "invalidStatuses": [
+          401
+        ]
+      },
+      "models": {
+        "auth": "none",
+        "listPath": "",
+        "inline": [
+          {
+            "id": "glm-4.7-flash",
+            "name": "GLM-4.7-Flash",
+            "context": 200000
+          },
+          {
+            "id": "glm-4.5-flash",
+            "name": "GLM-4.5-Flash",
+            "context": 128000
+          },
+          {
+            "id": "glm-4.6v-flash",
+            "name": "GLM-4.6V-Flash",
+            "context": 128000,
+            "vision": true
+          }
+        ],
+        "fields": {
+          "id": "id",
+          "name": "name",
+          "contextWindow": "context",
+          "visionFlag": "vision"
+        },
+        "free": {
+          "all": true
+        },
+        "exclude": []
+      },
+      "request": {
+        "stripParams": [
+          "logit_bias",
+          "logprobs",
+          "top_logprobs",
+          "n",
+          "parallel_tool_calls",
+          "presence_penalty",
+          "frequency_penalty"
+        ]
+      }
+    },
+    {
+      "id": "cohere",
+      "name": "Cohere (trial key)",
+      "baseUrl": "https://api.cohere.ai/compatibility/v1",
+      "keyUrl": "https://dashboard.cohere.com/api-keys",
+      "docsUrl": "https://docs.cohere.com/docs/rate-limits",
+      "termsUrl": "https://cohere.com/terms-of-use",
+      "mayTrainOnData": true,
+      "limitScope": "account",
+      "keyRotation": false,
+      "limits": {
+        "rpm": 20,
+        "rpd": 33
+      },
+      "notes": "Free trial keys allow 1,000 calls a month (spread here as about 33 a day) and 20 chat requests a minute, and are not for production or commercial use. Data-use terms for trial keys unverified, so treated as may-train.",
+      "validation": {
+        "url": "https://api.cohere.com/v1/models?page_size=1",
+        "invalidStatuses": [
+          401
+        ]
+      },
+      "models": {
+        "url": "https://api.cohere.com/v1/models?endpoint=chat&page_size=1000",
+        "auth": "required",
+        "listPath": "models",
+        "fields": {
+          "id": "name",
+          "contextWindow": "context_length",
+          "deprecated": "is_deprecated"
+        },
+        "free": {
+          "all": true
+        },
+        "exclude": [
+          "translate"
+        ]
+      },
+      "request": {
+        "stripParams": [
+          "logit_bias",
+          "top_logprobs",
+          "n",
+          "parallel_tool_calls",
+          "store",
+          "metadata",
+          "service_tier",
+          "modalities",
+          "prediction",
+          "audio",
+          "user"
         ]
       }
     }

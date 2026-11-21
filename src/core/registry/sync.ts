@@ -3,8 +3,9 @@ import { withTimeout, type FetchLike } from '../http'
 import { errorMessage } from '../keys/validate'
 import type { KeyVault } from '../keys/vault'
 import type { ProviderProfile } from '../providers/catalog'
+import { fillUrl, needsKeyVars, resolveKey, type ResolvedKey } from '../providers/credential'
 import type { ProviderStore } from '../providers/store'
-import { classifyHttpFailure, stateForFailure, type Failure } from '../routing/errors'
+import { classifyHttpFailure, stateForFailure, unavailablePatterns, type Failure } from '../routing/errors'
 import { redact } from '../security/redact'
 import { parseModelList, modelsHeaders, modelsUrl } from './discover'
 import { bundledSeed, enrich, type SeedFamily } from './enrich'
@@ -67,15 +68,26 @@ export class RegistryService {
     const keyView = spec.auth === 'none' ? undefined : usableKey(this.d.vault.list(providerId))
     if (spec.auth === 'required' && !keyView) return result('skipped', 'No usable key')
 
-    const key = keyView ? await this.d.vault.reveal(keyView.id) : undefined
-    const res = await withTimeout(this.d.syncTimeoutMs ?? 20_000, async (signal) => {
-      const r = await this.d.fetch(modelsUrl(spec, profile.baseUrl), {
-        method: 'GET',
-        headers: modelsHeaders(spec, key),
-        signal
-      })
-      return { status: r.status, ok: r.ok, body: await r.text() }
-    })
+    let key: ResolvedKey | undefined
+    try {
+      key = keyView ? resolveKey(profile, await this.d.vault.reveal(keyView.id)) : undefined
+    } catch (err) {
+      return result('skipped', (err as Error).message)
+    }
+    const url = modelsUrl(spec, profile.baseUrl, key?.vars)
+    if (!spec.inline && needsKeyVars(url)) return result('skipped', 'No usable key')
+
+    // A fixed list in the profile (no list endpoint) goes through the same parsing as a fetched one.
+    const res = spec.inline
+      ? { value: { status: 200, ok: true, body: JSON.stringify(spec.inline) } }
+      : await withTimeout(this.d.syncTimeoutMs ?? 20_000, async (signal) => {
+          const r = await this.d.fetch(url, {
+            method: 'GET',
+            headers: modelsHeaders(spec, key?.bearer),
+            signal
+          })
+          return { status: r.status, ok: r.ok, body: await r.text() }
+        })
 
     if (!('value' in res)) {
       const msg = res.timedOut ? 'Timed out' : `Network error: ${redact(String((res.error as Error)?.message ?? res.error))}`
@@ -95,7 +107,7 @@ export class RegistryService {
       if (discovered.length === 0) throw new Error('Provider returned no chat models')
       const enriched = discovered.map((m) => enrich(m, spec, this.d.seed ?? bundledSeed))
       const diff = this.d.registry.applySync(providerId, enriched)
-      if (keyView && keyView.status !== 'valid') this.d.vault.setStatus(keyView.id, 'valid')
+      if (keyView && !spec.inline && keyView.status !== 'valid') this.d.vault.setStatus(keyView.id, 'valid')
       return result('ok', `${diff.total} models`, { added: diff.added.length, gone: diff.gone.length, total: diff.total })
     } catch (err) {
       // A malformed response never wipes the registry: nothing is applied.
@@ -115,12 +127,17 @@ export class RegistryService {
       return { ok: false, latencyMs: 0, message: `Add a key for ${profile.name} to test this model`, model }
     }
 
-    const key = await this.d.vault.reveal(keyView.id)
+    let key: ResolvedKey
+    try {
+      key = resolveKey(profile, await this.d.vault.reveal(keyView.id))
+    } catch (err) {
+      return { ok: false, latencyMs: 0, message: (err as Error).message, model }
+    }
     const started = this.now()
     const res = await withTimeout(this.d.testTimeoutMs ?? 30_000, async (signal) => {
-      const r = await this.d.fetch(`${profile.baseUrl.replace(/\/$/, '')}/chat/completions`, {
+      const r = await this.d.fetch(`${fillUrl(profile.baseUrl, key.vars).replace(/\/$/, '')}/chat/completions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${key}` },
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${key.bearer}` },
         body: JSON.stringify({
           model: model.modelId,
           messages: [{ role: 'user', content: 'Reply with the single word: OK' }],
@@ -149,7 +166,7 @@ export class RegistryService {
       })
       return { ok: true, latencyMs, httpStatus: res.value.status, message: `Answered in ${latencyMs} ms`, model: updated }
     } else {
-      failure = classifyHttpFailure(res.value.status, res.value.headers, res.value.body, this.now())
+      failure = classifyHttpFailure(res.value.status, res.value.headers, res.value.body, this.now(), unavailablePatterns(profile))
       failure.message = errorMessage(res.value.body) || `HTTP ${res.value.status}`
       if (failure.kind === 'auth') this.d.vault.setStatus(keyView.id, 'invalid')
     }

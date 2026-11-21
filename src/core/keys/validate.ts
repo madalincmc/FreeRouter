@@ -1,6 +1,7 @@
 import type { KeyTestResult } from '@shared/ipc'
 import type { FetchLike } from '../http'
 import type { ProviderProfile } from '../providers/catalog'
+import { fillUrl, resolveKey, type ResolvedKey } from '../providers/credential'
 import { redact } from '../security/redact'
 
 export type { FetchLike }
@@ -39,18 +40,24 @@ export async function testKey(profile: ProviderProfile, key: string, opts: TestK
   const now = opts.now ?? Date.now
   const started = now()
   const { url, invalidStatuses, headers, method = 'GET', body: requestBody } = profile.validation
+  const done = (r: Omit<KeyTestResult, 'latencyMs'>): KeyTestResult => ({ ...r, latencyMs: now() - started })
+  let resolved: ResolvedKey
+  try {
+    resolved = resolveKey(profile, key)
+  } catch (err) {
+    return done({ outcome: 'invalid', message: (err as Error).message })
+  }
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 10_000)
-  const done = (r: Omit<KeyTestResult, 'latencyMs'>): KeyTestResult => ({ ...r, latencyMs: now() - started })
 
   try {
-    const res = await opts.fetch(url, {
+    const res = await opts.fetch(fillUrl(url, resolved.vars), {
       method,
       headers: {
         Accept: 'application/json',
         ...(requestBody ? { 'Content-Type': 'application/json' } : {}),
         ...headers,
-        Authorization: `Bearer ${key}`
+        Authorization: `Bearer ${resolved.bearer}`
       },
       ...(requestBody ? { body: JSON.stringify(requestBody) } : {}),
       signal: controller.signal

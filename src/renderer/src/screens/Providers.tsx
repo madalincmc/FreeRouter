@@ -238,7 +238,9 @@ function AddKeyForm({ provider: p }: { provider: ProviderView }) {
   const prefixHint =
     p.keyPrefix && trimmed.length >= p.keyPrefix.length && !trimmed.startsWith(p.keyPrefix)
       ? `${p.name} keys usually start with “${p.keyPrefix}”`
-      : null
+      : p.keyFormat && trimmed.length > 0 && trimmed.split(p.keyFormat.separator).length < p.keyFormat.parts
+        ? `Enter this key as ${p.keyFormat.hint}`
+        : null
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -254,7 +256,7 @@ function AddKeyForm({ provider: p }: { provider: ProviderView }) {
           type="password"
           autoComplete="off"
           spellCheck={false}
-          placeholder={p.keyPrefix ? `${p.keyPrefix}…` : 'API key'}
+          placeholder={p.keyFormat ? p.keyFormat.hint : p.keyPrefix ? `${p.keyPrefix}…` : 'API key'}
           aria-label={`${p.name} API key`}
           value={key}
           onChange={(e) => setKey(e.target.value)}

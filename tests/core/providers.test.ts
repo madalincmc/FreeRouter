@@ -4,8 +4,25 @@ import { cleanLimits, effectiveLimits, ProviderStore } from '@core/providers/sto
 import { memoryDb } from '../helpers'
 
 describe('provider catalog', () => {
-  it('contains the MVP providers (NVIDIA NIM replaces GitHub Models, retired 2026-07-30)', () => {
-    expect(bundledCatalog.providers.map((p) => p.id)).toEqual(['openrouter', 'groq', 'gemini', 'cerebras', 'mistral', 'nvidia'])
+  it('contains the MVP providers (NVIDIA NIM replaces GitHub Models, retired 2026-07-30) plus the v0.2 additions', () => {
+    expect(bundledCatalog.providers.map((p) => p.id)).toEqual([
+      'openrouter',
+      'groq',
+      'gemini',
+      'cerebras',
+      'mistral',
+      'nvidia',
+      'cloudflare',
+      'zai',
+      'cohere'
+    ])
+  })
+
+  it('compiles every error pattern, and Cloudflare keys carry the account id', () => {
+    for (const p of bundledCatalog.providers) for (const re of p.errors?.unavailable ?? []) expect(() => new RegExp(re)).not.toThrow()
+    const cf = bundledCatalog.providers.find((p) => p.id === 'cloudflare')!
+    expect(cf.credential).toMatchObject({ parts: ['accountId', 'token'], separator: ':' })
+    expect(cf.baseUrl).toContain('{accountId}')
   })
 
   it('NVIDIA limits are account-wide at 40 RPM with no key rotation', () => {
@@ -43,7 +60,7 @@ describe('ProviderStore', () => {
     const store = new ProviderStore(db, bundledCatalog)
     store.seed()
     const list = store.list(() => [])
-    expect(list).toHaveLength(6)
+    expect(list).toHaveLength(bundledCatalog.providers.length)
     expect(list.every((p) => Object.keys(p.limitOverrides).length === 0)).toBe(true)
     expect(list.filter((p) => !p.enabled).map((p) => p.id)).toEqual(['cerebras', 'mistral'])
     expect(db.prepare("SELECT may_train_on_data AS t FROM providers WHERE id = 'gemini'").get()).toEqual({ t: 1 })

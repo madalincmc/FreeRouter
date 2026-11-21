@@ -34,6 +34,9 @@ Before adding a key, read the provider's terms. In particular, check:
 | NVIDIA NIM | [NVIDIA terms](https://www.nvidia.com/en-us/about-nvidia/terms-of-service/) + the API trial terms shown on [build.nvidia.com](https://build.nvidia.com/) | [Docs](https://docs.api.nvidia.com/nim/) |
 | Cerebras | [cerebras.ai/terms-of-service](https://www.cerebras.ai/terms-of-service) | [Rate limits](https://inference-docs.cerebras.ai/support/rate-limits) |
 | Mistral | [mistral.ai/terms](https://mistral.ai/terms) | [Pricing](https://mistral.ai/pricing) |
+| Cloudflare Workers AI | [cloudflare.com/terms](https://www.cloudflare.com/terms/) · [privacy](https://www.cloudflare.com/privacypolicy/) | [Pricing & free allocation](https://developers.cloudflare.com/workers-ai/platform/pricing/) |
+| Z.ai (GLM) | [Z.ai terms of use](https://docs.z.ai/legal-agreement/terms-of-use) · [privacy](https://docs.z.ai/legal-agreement/privacy-policy) | [Pricing](https://docs.z.ai/guides/overview/pricing) |
+| Cohere | [cohere.com/terms-of-use](https://cohere.com/terms-of-use) · [privacy](https://cohere.com/privacy) | [Pricing](https://cohere.com/pricing) · [rate limits](https://docs.cohere.com/docs/rate-limits) |
 
 Providers change their terms. These links were checked in November 2026, so read the current version yourself.
 
@@ -43,9 +46,15 @@ FreeRouter only routes to models it detects as free, and it never routes to a mo
 Free detection is best-effort, though, and some of it rests on assumptions about your account:
 
 - **OpenRouter:** only `:free` models with zero listed pricing are used.
-- **Gemini, Groq, NVIDIA, Cerebras and Mistral:** FreeRouter assumes **your whole account is on the free tier**.
-  If billing is enabled on that account or Google Cloud project, the same requests may be **charged at paid
-  rates**. For example, a Gemini key from a project with Cloud Billing turned on is no longer on the free tier.
+- **Gemini, Groq, NVIDIA, Cerebras, Mistral, Cloudflare and Cohere:** FreeRouter assumes **your whole account
+  is on the free tier**. If billing is enabled on that account or Google Cloud project, the same requests may be
+  **charged at paid rates**. For example, a Gemini key from a project with Cloud Billing turned on is no longer on
+  the free tier, and a Cloudflare account on the Workers Paid plan is billed for usage past the daily free
+  allocation.
+- **Z.ai:** only the Flash models Z.ai lists at $0 are used (GLM-4.7-Flash, GLM-4.5-Flash, GLM-4.6V-Flash).
+  Z.ai's other models are paid and are never routed to.
+- **Cohere:** trial keys are free but capped at 1,000 calls a month, and Cohere doesn't allow them for production
+  or commercial use. A production key is billed per token.
 - Free tiers, limits and model line-ups change, sometimes without notice. A model that was free yesterday can
   become paid today, and FreeRouter only notices at the next model sync.
 
@@ -90,7 +99,8 @@ account suspended, and it makes free access worse for everyone.
 
 ## 5. Privacy: what you send leaves your machine
 
-- Prompts, files and code you send go to the provider that serves the request. Read their privacy policy.
+- Prompts, files and code you send go to the provider that serves the request. Read their privacy policy, and
+  note where the provider operates: Z.ai, for example, is run by Zhipu AI from Singapore.
 - **Free tiers often allow logging and training on your prompts.** FreeRouter marks providers it believes may
   do this, and **Private mode** excludes them. These flags reflect our reading of each provider's terms at the
   time, so they can be wrong or out of date.

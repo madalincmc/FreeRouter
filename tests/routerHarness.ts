@@ -65,6 +65,10 @@ export interface HarnessOptions {
   models?: Record<string, FakeModel[]>
   /** Keys per provider (default 1 each, fb gets 2). */
   keys?: Partial<Record<'fa' | 'fb' | 'fc', number>>
+  /** Extra profile fields per provider, given the fake server's base URL (e.g. a `credential` spec). */
+  patch?: Partial<Record<'fa' | 'fb' | 'fc', (base: string) => Record<string, unknown>>>
+  /** Stored key text per provider and index (default `sk-fake-<p>-<i>-0123456789`). */
+  keyText?: Partial<Record<'fa' | 'fb' | 'fc', (i: number) => string>>
 }
 
 export async function makeHarness(o: HarnessOptions = {}) {
@@ -76,7 +80,7 @@ export async function makeHarness(o: HarnessOptions = {}) {
   const catalog = parseCatalog({
     version: 1,
     limitsNote: '',
-    providers: (['fa', 'fb', 'fc'] as const).map((id) => profile(base, id, o.providers?.[id]))
+    providers: (['fa', 'fb', 'fc'] as const).map((id) => ({ ...profile(base, id, o.providers?.[id]), ...o.patch?.[id]?.(base) }))
   })
   const db = memoryDb()
   const providers = new ProviderStore(db, catalog)
@@ -85,7 +89,8 @@ export async function makeHarness(o: HarnessOptions = {}) {
   const keyCounts = { fa: 1, fb: 2, fc: 1, ...o.keys }
   for (const [p, n] of Object.entries(keyCounts)) {
     for (let i = 0; i < n; i++) {
-      await vault.add({ providerId: p, label: `${p}-${i}`, key: `sk-fake-${p}-${i}-0123456789`, status: 'valid' })
+      const key = o.keyText?.[p as 'fa' | 'fb' | 'fc']?.(i) ?? `sk-fake-${p}-${i}-0123456789`
+      await vault.add({ providerId: p, label: `${p}-${i}`, key, status: 'valid' })
     }
   }
 

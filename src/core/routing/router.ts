@@ -2,9 +2,10 @@ import type { ModelState, ModelView, ProviderView } from '@shared/ipc'
 import type { FetchLike, HttpResponse } from '../http'
 import { errorMessage } from '../keys/validate'
 import type { ProviderProfile } from '../providers/catalog'
+import { fillUrl, resolveKey, type ResolvedKey } from '../providers/credential'
 import { redact } from '../security/redact'
 import { rank, RoutingError, type Candidate } from './candidates'
-import { classifyHttpFailure, stateForFailure, type Failure } from './errors'
+import { classifyHttpFailure, stateForFailure, unavailablePatterns, type Failure } from './errors'
 import type { HealthTracker } from './health'
 import { parseModelField, requestNeeds, UnknownModelError, type RequestNeeds } from './intent'
 import type { QuotaTracker } from './quota'
@@ -221,7 +222,12 @@ export class Router {
     }
     if (!profile) return fail({ kind: 'bad_request', message: 'provider profile missing' })
 
-    const key = await this.d.revealKey(c.key.id)
+    let key: ResolvedKey
+    try {
+      key = resolveKey(profile, await this.d.revealKey(c.key.id))
+    } catch (err) {
+      return fail({ kind: 'auth', message: (err as Error).message })
+    }
     if (c.provider.keyRotation) this.rotation.set(c.provider.id, (this.rotation.get(c.provider.id) ?? 0) + 1)
     this.d.quota.recordRequest(c.counterKey, needs.promptTokens)
 
@@ -251,12 +257,12 @@ export class Router {
 
     let res: HttpResponse
     try {
-      res = await this.d.fetch(`${profile.baseUrl.replace(/\/$/, '')}/chat/completions`, {
+      res = await this.d.fetch(`${fillUrl(profile.baseUrl, key.vars).replace(/\/$/, '')}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'text/event-stream, application/json',
-          Authorization: `Bearer ${key}`
+          Authorization: `Bearer ${key.bearer}`
         },
         body,
         signal: controller.signal
@@ -272,7 +278,7 @@ export class Router {
     if (!res.ok) {
       const text = await res.text().catch(() => '')
       cleanup()
-      const failure = classifyHttpFailure(res.status, res.headers, text, this.now())
+      const failure = classifyHttpFailure(res.status, res.headers, text, this.now(), unavailablePatterns(profile))
       failure.message = errorMessage(text) || `HTTP ${res.status}`
       return fail(failure)
     }

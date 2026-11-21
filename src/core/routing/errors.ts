@@ -81,14 +81,24 @@ export function nextUtcMidnight(now: number): number {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1)
 }
 
+/** Compiles a profile's `errors.unavailable` patterns (case-insensitive). */
+export function unavailablePatterns(profile: { errors?: { unavailable: string[] } } | undefined): RegExp[] {
+  return (profile?.errors?.unavailable ?? []).map((p) => new RegExp(p, 'i'))
+}
+
 export function classifyHttpFailure(
   status: number,
   headers: { get(name: string): string | null },
   body: string,
-  now: number
+  now: number,
+  /** Profile patterns for "this model isn't available to this account" (see `unavailablePatterns`). */
+  unavailable: RegExp[] = []
 ): Failure {
   const message = body.slice(0, 300)
   const retryAt = retryAtFromHeaders(headers, now)
+  if (status >= 400 && unavailable.some((re) => re.test(body))) {
+    return { kind: 'no_free_quota', status, retryAt: now + UNAVAILABLE_COOLDOWN_MS, message }
+  }
   if (status === 429) {
     if (ZERO_QUOTA_RE.test(body)) return { kind: 'no_free_quota', status, retryAt: now + UNAVAILABLE_COOLDOWN_MS, message }
     if (DAILY_RE.test(body)) return { kind: 'quota_exhausted', status, retryAt: retryAt ?? nextUtcMidnight(now), message }

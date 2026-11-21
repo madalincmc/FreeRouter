@@ -341,3 +341,30 @@ describe('Router – quota and keys', () => {
     expect(new Set(h.fake.callsTo('fb').map((c) => c.headers.authorization)).size).toBe(1)
   })
 })
+
+describe('Router – profile credential and error data', () => {
+  const cloudflareLike = {
+    fa: (base: string) => ({
+      baseUrl: `${base}/{tenant}/v1`,
+      credential: { parts: ['tenant', 'token'], separator: ':', hint: 'TENANT:TOKEN' },
+      errors: { unavailable: ['"code"\s*:\s*5035'] }
+    })
+  }
+
+  it('fills URL placeholders from a compound key and sends only the token', async () => {
+    await setup({ patch: cloudflareLike, keyText: { fa: () => 'fa:tok-0123456789' } })
+    const r = await h.run()
+    expect(r.start).toMatchObject({ model: 'fa/big-400b' })
+    expect(h.fake.callsTo('fa')[0]!.headers.authorization).toBe('Bearer tok-0123456789')
+  })
+
+  it('a 403 matching an "unavailable" pattern cools the model for a week and keeps the key valid', async () => {
+    await setup({ patch: cloudflareLike, keyText: { fa: () => 'fa:tok-0123456789' } })
+    h.fake.script('fa', 'big-400b', { kind: 'status', status: 403, body: { errors: [{ code: 5035, message: 'This model requires a Workers Paid plan' }] } })
+    const r = await h.run()
+    expect(r.start!.model).not.toBe('fa/big-400b')
+    expect(r.start!.attempts[0]).toMatchObject({ model: 'fa/big-400b', failure: 'no_free_quota' })
+    expect(h.vault.list('fa')[0]!.status).toBe('valid')
+    expect(h.registry.get('fa/big-400b')!.cooldownUntil! - Date.now()).toBeGreaterThan(6 * 24 * 60 * 60_000)
+  })
+})

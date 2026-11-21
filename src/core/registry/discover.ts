@@ -1,5 +1,6 @@
 import { getPath } from '../http'
 import type { ModelsSpec } from '../providers/catalog'
+import { fillUrl } from '../providers/credential'
 
 /** One chat model as reported by a provider's model list, before seed/heuristic enrichment. */
 export interface DiscoveredModel {
@@ -54,6 +55,7 @@ export function parseModelList(spec: ModelsSpec, json: unknown): DiscoveredModel
     if (excludes.some((x) => lower.includes(x))) continue
     if (f.active && getPath(entry, f.active) === false) continue
     if (f.chatFlag && getPath(entry, f.chatFlag) === false) continue
+    if (f.deprecated && getPath(entry, f.deprecated) === true) continue
     if (spec.require?.some((r) => !strings(getPath(entry, r.path)).includes(r.includes))) continue
     // Chat routing needs text-only output; generators (image, music: text+audio) are not chat models.
     const outputs = f.outputModalities ? strings(getPath(entry, f.outputModalities)) : []
@@ -77,8 +79,9 @@ export function parseModelList(spec: ModelsSpec, json: unknown): DiscoveredModel
   return out
 }
 
-export function modelsUrl(spec: ModelsSpec, baseUrl: string): string {
-  return spec.url ?? `${baseUrl.replace(/\/$/, '')}/models`
+/** The list URL with credential placeholders filled (`vars` from `resolveKey`). */
+export function modelsUrl(spec: ModelsSpec, baseUrl: string, vars: Record<string, string> = {}): string {
+  return fillUrl(spec.url ?? `${baseUrl.replace(/\/$/, '')}/models`, vars)
 }
 
 /** Request headers for the list call; the key goes where the spec says. */

@@ -35,7 +35,41 @@ describe('RegistryService.sync', () => {
     const byId = Object.fromEntries(results.map((r) => [r.providerId, r]))
     expect(byId['openrouter']).toMatchObject({ outcome: 'ok', total: 5, added: 5 })
     expect(byId['groq']).toMatchObject({ outcome: 'skipped', message: 'No usable key' })
-    expect(registry.list().filter((m) => m.isFree)).toHaveLength(4)
+    expect(byId['cloudflare']).toMatchObject({ outcome: 'skipped', message: 'No usable key' })
+    // Z.ai's list is fixed in its profile, so it syncs without a key or a request.
+    expect(byId['zai']).toMatchObject({ outcome: 'ok', total: 3 })
+    expect(registry.list().filter((m) => m.isFree)).toHaveLength(4 + 3)
+  })
+
+  it('fills compound-key placeholders and sends only the token part (Cloudflare)', async () => {
+    const CF_MODELS = 'https://api.cloudflare.com/client/v4/accounts/acc123/ai/models/search?task=Text%20Generation&per_page=200'
+    const { service, vault, fetch, registry } = await setup({
+      [CF_MODELS]: {
+        status: 200,
+        body: { success: true, result: [{ name: '@cf/meta/llama-3.3-70b-instruct-fp8-fast' }, { name: '@cf/meta/llama-guard-3-8b' }] }
+      }
+    })
+    await vault.add({ providerId: 'cloudflare', label: '', key: 'acc123:cf-token-0123456789', status: 'valid' })
+    expect(await service.syncProvider('cloudflare')).toMatchObject({ outcome: 'ok', total: 1 })
+    expect(fetch.calls[0]!.headers['Authorization']).toBe('Bearer cf-token-0123456789')
+    expect(registry.list().map((m) => m.modelId)).toContain('@cf/meta/llama-3.3-70b-instruct-fp8-fast')
+  })
+
+  it('skips Cohere models marked deprecated', async () => {
+    const COHERE_MODELS = 'https://api.cohere.com/v1/models?endpoint=chat&page_size=1000'
+    const { service, vault } = await setup({
+      [COHERE_MODELS]: {
+        status: 200,
+        body: {
+          models: [
+            { name: 'command-a-03-2025', context_length: 256000, is_deprecated: false },
+            { name: 'command-r-03-2024', context_length: 128000, is_deprecated: true }
+          ]
+        }
+      }
+    })
+    await vault.add({ providerId: 'cohere', label: '', key: 'cohere-trial-0123456789', status: 'valid' })
+    expect(await service.syncProvider('cohere')).toMatchObject({ outcome: 'ok', total: 1 })
   })
 
   it('authenticates with the provider key', async () => {

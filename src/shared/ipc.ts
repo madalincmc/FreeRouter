@@ -110,6 +110,8 @@ export interface ProviderView {
   docsUrl: string
   termsUrl: string
   keyPrefix?: string
+  /** Set for keys made of several parts (Cloudflare: `ACCOUNT_ID:API_TOKEN`). */
+  keyFormat?: { hint: string; separator: string; parts: number }
   enabled: boolean
   mayTrainOnData: boolean
   limitScope: LimitScope

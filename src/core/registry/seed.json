@@ -15,11 +15,19 @@
     { "match": "qwen3?-coder", "tags": ["coding", "tools"], "quality": { "general": 70, "coding": 80, "reasoning": 66, "tools": 74 } },
     { "match": "qwen-?3-235b|qwen3-235b", "tags": ["coding", "reasoning", "tools"], "quality": { "general": 76, "coding": 74, "reasoning": 76, "tools": 70 } },
     { "match": "qwen-?3-32b|qwen3-32b", "tags": ["reasoning", "tools"], "quality": { "general": 66, "coding": 64, "reasoning": 68, "tools": 64 } },
+    { "match": "qwen3\\.\\d+-27b", "tags": ["reasoning", "tools"], "quality": { "general": 70, "coding": 68, "reasoning": 70, "tools": 66 } },
+    { "match": "qwen2\\.5-coder-32b", "tags": ["coding"], "quality": { "general": 60, "coding": 70, "reasoning": 56, "tools": 50 } },
     { "match": "qwq", "tags": ["reasoning"], "quality": { "general": 62, "coding": 60, "reasoning": 70, "tools": 50 } },
 
+    { "match": "deepseek-r1-distill", "tags": ["reasoning"], "quality": { "general": 58, "coding": 56, "reasoning": 64, "tools": 0 } },
     { "match": "deepseek-r1", "tags": ["reasoning"], "quality": { "general": 74, "coding": 72, "reasoning": 82, "tools": 50 } },
+    { "match": "deepseek-v4(\\.\\d)?-flash", "tags": ["coding", "reasoning", "tools", "fast"], "quality": { "general": 76, "coding": 76, "reasoning": 74, "tools": 72 } },
+    { "match": "deepseek-v4", "tags": ["coding", "reasoning", "tools"], "quality": { "general": 84, "coding": 84, "reasoning": 82, "tools": 80 } },
     { "match": "deepseek-(v3|chat)", "tags": ["coding", "tools"], "quality": { "general": 76, "coding": 76, "reasoning": 70, "tools": 70 } },
     { "match": "kimi-k2", "tags": ["coding", "tools"], "quality": { "general": 76, "coding": 78, "reasoning": 70, "tools": 76 } },
+    { "match": "glm-5", "tags": ["coding", "reasoning", "tools"], "quality": { "general": 82, "coding": 82, "reasoning": 80, "tools": 78 } },
+    { "match": "glm-4\\.[5-9]v-flash", "tags": ["tools", "vision"], "quality": { "general": 60, "coding": 56, "reasoning": 56, "tools": 58 } },
+    { "match": "glm-4\\.[5-9]-flash", "tags": ["coding", "reasoning", "tools"], "quality": { "general": 64, "coding": 66, "reasoning": 62, "tools": 64 } },
     { "match": "glm-4\\.[5-9]", "tags": ["coding", "reasoning", "tools"], "quality": { "general": 74, "coding": 76, "reasoning": 72, "tools": 72 } },
 
     { "match": "gemini-3(\\.\\d)?-pro", "tags": ["coding", "reasoning", "tools", "vision"], "quality": { "general": 90, "coding": 88, "reasoning": 90, "tools": 86 } },
@@ -29,6 +37,7 @@
     { "match": "gemini-2\\.5-flash-lite", "tags": ["tools", "vision", "fast"], "quality": { "general": 66, "coding": 60, "reasoning": 58, "tools": 62 } },
     { "match": "gemini-2\\.5-flash", "tags": ["coding", "reasoning", "tools", "vision", "fast"], "quality": { "general": 76, "coding": 74, "reasoning": 74, "tools": 72 } },
     { "match": "gemini-2\\.0-flash", "tags": ["tools", "vision", "fast"], "quality": { "general": 68, "coding": 64, "reasoning": 58, "tools": 66 } },
+    { "match": "gemma-4", "tags": ["tools", "vision"], "quality": { "general": 66, "coding": 62, "reasoning": 62, "tools": 60 } },
     { "match": "gemma-3n", "tags": ["fast"], "quality": { "general": 44, "coding": 38, "reasoning": 36, "tools": 0 } },
     { "match": "gemma-3-27b", "tags": ["vision"], "quality": { "general": 58, "coding": 52, "reasoning": 50, "tools": 0 } },
 
@@ -41,6 +50,13 @@
     { "match": "mistral-small", "tags": ["tools", "vision", "fast"], "quality": { "general": 62, "coding": 58, "reasoning": 54, "tools": 62 } },
     { "match": "pixtral-large", "tags": ["tools", "vision"], "quality": { "general": 70, "coding": 62, "reasoning": 62, "tools": 66 } },
     { "match": "ministral", "tags": ["tools", "fast"], "quality": { "general": 48, "coding": 42, "reasoning": 40, "tools": 50 } },
-    { "match": "open-mistral-nemo|mistral-nemo", "tags": ["tools"], "quality": { "general": 50, "coding": 44, "reasoning": 42, "tools": 50 } }
+    { "match": "open-mistral-nemo|mistral-nemo", "tags": ["tools"], "quality": { "general": 50, "coding": 44, "reasoning": 42, "tools": 50 } },
+
+    { "match": "command-a-reasoning", "tags": ["reasoning", "tools"], "quality": { "general": 74, "coding": 68, "reasoning": 76, "tools": 72 } },
+    { "match": "command-a-vision", "tags": ["vision"], "quality": { "general": 66, "coding": 56, "reasoning": 58, "tools": 0 } },
+    { "match": "command-a", "tags": ["tools"], "quality": { "general": 72, "coding": 66, "reasoning": 64, "tools": 74 } },
+    { "match": "command-r-plus|command-r\\+", "tags": ["tools"], "quality": { "general": 60, "coding": 52, "reasoning": 52, "tools": 62 } },
+    { "match": "command-r7b", "tags": ["tools", "fast"], "quality": { "general": 44, "coding": 38, "reasoning": 36, "tools": 44 } },
+    { "match": "command-r", "tags": ["tools"], "quality": { "general": 54, "coding": 46, "reasoning": 46, "tools": 56 } }
   ]
 }

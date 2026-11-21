@@ -13,7 +13,7 @@ with a chat UI for you and an OpenAI-compatible gateway for your coding tools.
 ![Electron](https://img.shields.io/badge/Electron-45-47848F?logo=electron&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-206%20passing-22C55E)
+![Tests](https://img.shields.io/badge/tests-220%20passing-22C55E)
 ![Local first](https://img.shields.io/badge/keys-DPAPI%20encrypted-8B5CF6)
 ![License: MIT](https://img.shields.io/badge/license-MIT-yellow)
 
@@ -82,7 +82,7 @@ Every failure is classified and remembered:
 | Daily cap hit | Parks the model until the quota resets |
 | Zero free quota (`limit: 0`) or `404` | Takes the model out for 7 days: this account can't use it |
 | `5xx`, timeout, no first token | Lowers reliability; 3 in a row cools the model down for 5 min |
-| `401`/`403` | Flags the key as invalid and moves on |
+| `401`/`403` | Flags the key as invalid and moves on (unless the provider's profile says the error means "model not on your plan", which takes the model out for 7 days) |
 | `400` (context too long, unsupported parameter) | Skips the model for this request only |
 
 ## Supported providers
@@ -93,6 +93,9 @@ Every failure is classified and remembered:
 | **Groq** | ✅ | Very fast, per-model limits |
 | **NVIDIA NIM** (build.nvidia.com) | ✅ | Large catalogue, about 40 requests/min |
 | **OpenRouter** | ✅ | `:free` models; 50 requests/day account-wide |
+| **Cloudflare Workers AI** | ✅ | 10,000 Neurons/day; key entered as `ACCOUNT_ID:API_TOKEN` |
+| **Z.ai** (GLM) | ✅ | Free Flash models only (GLM-4.7-Flash, 4.5-Flash, 4.6V-Flash) |
+| **Cohere** (trial key) | ✅ | 1,000 calls/month; trial keys are non-commercial |
 | Cerebras | ⚠️ | Off by default: needs a card as of Nov 2026 |
 | Mistral (La Plateforme) | ⚠️ | Off by default: API keys need billing as of Nov 2026 |
 
@@ -111,8 +114,8 @@ Providers are **data, not code**. Each one is a profile in [`providers.json`](sr
 > [!IMPORTANT]
 > Before adding a key, read [**Terms of use & responsible use**](TERMS.md). In short:
 > - Every provider has its own terms. You're their customer, so read them.
-> - **Use keys from accounts with no billing attached.** For Gemini, Groq and NVIDIA, FreeRouter assumes your
->   account is on the free tier. With billing enabled, the same requests can be charged.
+> - **Use keys from accounts with no billing attached.** For Gemini, Groq, NVIDIA, Cloudflare and Cohere,
+>   FreeRouter assumes your account is on the free tier. With billing enabled, the same requests can be charged.
 > - **Don't add a credit card just to unlock a "free" trial.** Many trials start charging when they end.
 > - Check each provider's usage dashboard now and then. Free tiers change without notice.
 
@@ -184,7 +187,7 @@ Requires Windows 10/11, **Node 22+** and **pnpm 10**.
 ```powershell
 pnpm install
 pnpm dev          # run with hot reload
-pnpm test         # 206 Vitest tests (no Electron needed)
+pnpm test         # 220 Vitest tests (no Electron needed)
 pnpm typecheck
 pnpm package      # NSIS installer -> dist/FreeRouter-Setup-<version>.exe (~110 MB)
 ```

@@ -28,15 +28,22 @@ const ModelFieldsSchema = z
     /** Entry is skipped when this boolean is false (e.g. Mistral embed models). */
     chatFlag: z.string().optional(),
     /** Entry is skipped when this boolean is false (e.g. Groq deactivated models). */
-    active: z.string().optional()
+    active: z.string().optional(),
+    /** Entry is skipped when this boolean is true (e.g. Cohere's `is_deprecated`). */
+    deprecated: z.string().optional()
   })
   .strict()
 
 /** How to read a provider's model list. All provider differences are data here, not code. */
 export const ModelsSpecSchema = z
   .object({
-    /** Defaults to `${baseUrl}/models`. */
+    /** Defaults to `${baseUrl}/models`. May contain credential placeholders such as `{accountId}`. */
     url: z.url().optional(),
+    /**
+     * A fixed model list for providers with no list endpoint (Z.ai). Read with the same `fields`
+     * as a fetched list; nothing is fetched. Use with `listPath: ""`.
+     */
+    inline: z.array(z.record(z.string(), z.unknown())).min(1).optional(),
     auth: z.enum(['none', 'optional', 'required']),
     /** Header carrying the raw key instead of `Authorization: Bearer` (Gemini native API). */
     authHeader: z.string().optional(),
@@ -75,6 +82,19 @@ export const ProviderProfileSchema = z
     /** The provider's terms of service; required, shown next to "Get a key" (see TERMS.md). */
     termsUrl: z.url(),
     keyPrefix: z.string().optional(),
+    /**
+     * A key made of several parts the user pastes as one string (Cloudflare: `ACCOUNT_ID:API_TOKEN`).
+     * The last part is the bearer token; the others fill `{name}` placeholders in the profile's URLs.
+     */
+    credential: z
+      .object({
+        parts: z.array(z.string().regex(/^[a-zA-Z]+$/)).min(2),
+        separator: z.string().min(1),
+        /** Shown as the key field's placeholder and in format errors. */
+        hint: z.string().min(1)
+      })
+      .strict()
+      .optional(),
     mayTrainOnData: z.boolean(),
     /** Who the limits apply to – drives the "extra keys don't add capacity" hint and quota sharing. */
     limitScope: z.enum(['account', 'organization', 'project', 'key']),
@@ -100,7 +120,18 @@ export const ProviderProfileSchema = z
       .strict(),
     models: ModelsSpecSchema,
     /** Request quirks: parameters this provider rejects are removed before sending (PRD §8). */
-    request: z.object({ stripParams: z.array(z.string()) }).strict().optional()
+    request: z.object({ stripParams: z.array(z.string()) }).strict().optional(),
+    errors: z
+      .object({
+        /**
+         * Case-insensitive regexes for error bodies that mean "this model isn't available to this
+         * account" (Cloudflare 403 code 5035: needs a paid plan). Such a failure cools the model down
+         * for a week instead of flagging the key as invalid.
+         */
+        unavailable: z.array(z.string()).min(1)
+      })
+      .strict()
+      .optional()
   })
   .strict()
 

@@ -113,6 +113,9 @@ export class ProviderStore {
         docsUrl: p.docsUrl,
         termsUrl: p.termsUrl,
         keyPrefix: p.keyPrefix,
+        ...(p.credential
+          ? { keyFormat: { hint: p.credential.hint, separator: p.credential.separator, parts: p.credential.parts.length } }
+          : {}),
         enabled: row ? row.enabled === 1 : true,
         mayTrainOnData: p.mayTrainOnData,
         limitScope: p.limitScope,
