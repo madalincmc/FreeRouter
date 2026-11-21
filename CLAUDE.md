@@ -40,7 +40,7 @@ resources/     icons (icon.png for app/installer, tray.png for the tray)
 - **Quota** (`quota.ts`). Sliding 60 s windows live in memory. Per-UTC-day counters persist in `usage_counters`. `counterKey(key, model, accountWide)` puts every model under `*` for account-wide providers (OpenRouter). Header hints (`x-ratelimit-remaining-*`) override the local counts until their reset.
 - **Router tests** use `tests/fakeProvider.ts`, a real HTTP server with scripted behaviours per model, through `tests/routerHarness.ts`. Add a scripted behaviour there rather than mocking fetch.
 - **Database.** SQLite runs in WAL mode at `%APPDATA%/FreeRouter/freerouter.db`. Schema changes are new migration files; never edit a shipped migration.
-- **Native modules.** `better-sqlite3` ≥13 ships N-API prebuilds that load in both Node (Vitest) and Electron. **Do not add `electron-builder install-app-deps` or `@electron/rebuild`.** A source build is unnecessary, and node-gyp fails because the repo path contains a space ("My PC").
+- **Native modules.** `better-sqlite3` ≥13 ships N-API prebuilds that load in both Node (Vitest) and Electron. At runtime it always loads `prebuilds/<platform>.node`, so it's listed in `pnpm.ignoredBuiltDependencies`. Allow-listing it in `onlyBuiltDependencies` makes pnpm run a pointless `node-gyp rebuild`, which fails on CI runners without Visual Studio. **Do not add `electron-builder install-app-deps` or `@electron/rebuild`.** A source build is unnecessary, and node-gyp fails because the repo path contains a space ("My PC").
 - If `node_modules/electron/dist` is missing after an install, run `node node_modules/electron/install.js`.
 - Keep core DB logic driver-agnostic through the `SqlDatabase` interface in `core/db/migrate.ts`.
 
