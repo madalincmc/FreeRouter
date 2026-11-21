@@ -204,7 +204,7 @@ version tag starts it:
 # 1. Bump "version" in package.json (e.g. 0.1.0 -> 0.1.1), then:
 pnpm typecheck; pnpm test
 git commit -am "Release 0.1.1"
-git tag v0.1.1
+git tag -a v0.1.1 -m "v0.1.1"   # annotated: --follow-tags skips plain tags
 git push --follow-tags
 ```
 
