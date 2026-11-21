@@ -29,6 +29,7 @@ export function withDevProvider(catalog: Catalog): Catalog {
         baseUrl: `${url}/devfake/v1`,
         keyUrl: 'https://example.com',
         docsUrl: 'https://example.com',
+        termsUrl: 'https://example.com',
         mayTrainOnData: false,
         limitScope: 'organization',
         keyRotation: true,

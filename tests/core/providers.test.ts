@@ -15,7 +15,7 @@ describe('provider catalog', () => {
 
   it('uses https everywhere', () => {
     for (const p of bundledCatalog.providers) {
-      for (const url of [p.baseUrl, p.keyUrl, p.docsUrl, p.validation.url]) expect(url).toMatch(/^https:\/\//)
+      for (const url of [p.baseUrl, p.keyUrl, p.docsUrl, p.termsUrl, p.validation.url]) expect(url).toMatch(/^https:\/\//)
     }
   })
 
@@ -28,6 +28,12 @@ describe('provider catalog', () => {
   it('marks OpenRouter limits as account-wide with no key rotation (PRD §6)', () => {
     const or = bundledCatalog.providers.find((p) => p.id === 'openrouter')!
     expect(or).toMatchObject({ limitScope: 'account', keyRotation: false, limits: { rpm: 20, rpd: 50 } })
+  })
+
+  it('requires an https terms-of-service link for every provider (TERMS.md)', () => {
+    for (const p of bundledCatalog.providers) expect(p.termsUrl, p.id).toMatch(/^https:\/\//)
+    const { termsUrl: _omit, ...withoutTerms } = bundledCatalog.providers[0]!
+    expect(() => parseCatalog({ ...bundledCatalog, providers: [withoutTerms] })).toThrow()
   })
 })
 

@@ -24,6 +24,7 @@ function profile(base: string, id: string, o: { scope?: Scope; rotation?: boolea
     baseUrl: `${base}/${id}/v1`,
     keyUrl: 'https://example.com/keys',
     docsUrl: 'https://example.com/docs',
+    termsUrl: 'https://example.com/terms',
     mayTrainOnData: o.mayTrain ?? false,
     limitScope: o.scope ?? 'organization',
     keyRotation: o.rotation ?? true,

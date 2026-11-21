@@ -103,6 +103,7 @@ function provider(id: string, o: Partial<ProviderView> = {}): ProviderView {
     baseUrl: 'https://x',
     keyUrl: 'https://x',
     docsUrl: 'https://x',
+    termsUrl: 'https://x',
     enabled: true,
     mayTrainOnData: false,
     limitScope: 'organization',

@@ -104,6 +104,7 @@ export interface ProviderView {
   baseUrl: string
   keyUrl: string
   docsUrl: string
+  termsUrl: string
   keyPrefix?: string
   enabled: boolean
   mayTrainOnData: boolean

@@ -111,6 +111,7 @@ export class ProviderStore {
         baseUrl: p.baseUrl,
         keyUrl: p.keyUrl,
         docsUrl: p.docsUrl,
+        termsUrl: p.termsUrl,
         keyPrefix: p.keyPrefix,
         enabled: row ? row.enabled === 1 : true,
         mayTrainOnData: p.mayTrainOnData,

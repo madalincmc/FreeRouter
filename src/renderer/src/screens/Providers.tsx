@@ -36,6 +36,7 @@ export function ProvidersScreen() {
           OS encryption is unavailable, so keys cannot be stored. FreeRouter never falls back to plaintext.
         </div>
       )}
+      <TermsNotice />
       {providers && (
         <p className="mb-4 text-sm text-muted">
           {configured} of {providers.length} providers have a usable key.
@@ -49,6 +50,34 @@ export function ProvidersScreen() {
         ))}
       </div>
     </Page>
+  )
+}
+
+const TERMS_URL = 'https://github.com/madalincmc/FreeRouter/blob/master/TERMS.md'
+
+/** Always visible: this is the screen where people create accounts and paste keys. */
+function TermsNotice() {
+  return (
+    <div className="mb-4 flex items-start gap-3 rounded-lg border border-warn/40 bg-warn/10 px-4 py-3 text-sm">
+      <AlertTriangle size={18} className="mt-0.5 shrink-0 text-warn" />
+      <div className="space-y-1.5">
+        <p className="font-medium">You use these providers with your own accounts, under their terms.</p>
+        <ul className="list-disc space-y-0.5 pl-4 text-muted">
+          <li>Read each provider’s terms of service and privacy policy before adding a key.</li>
+          <li>
+            Use keys from accounts with <strong className="text-fg">no billing attached</strong>. With billing on, the same requests can be
+            charged, and FreeRouter doesn’t track money.
+          </li>
+          <li>
+            <strong className="text-fg">Don’t add a credit card</strong> just to unlock a “free” trial. Many trials start charging when they end.
+          </li>
+          <li>Check each provider’s usage dashboard now and then. Free tiers change without notice.</li>
+        </ul>
+        <a href={TERMS_URL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-accent hover:underline">
+          Terms of use &amp; responsible use <ExternalLink size={11} />
+        </a>
+      </div>
+    </div>
   )
 }
 
@@ -72,6 +101,9 @@ function ProviderCard({ provider: p }: { provider: ProviderView }) {
           <p className="selectable mt-0.5 font-mono text-xs text-muted">{p.baseUrl}</p>
         </div>
         <div className="flex items-center gap-3">
+          <a href={p.termsUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-muted hover:text-fg hover:underline">
+            Terms <ExternalLink size={12} />
+          </a>
           <a href={p.keyUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-accent hover:underline">
             Get a key <ExternalLink size={12} />
           </a>

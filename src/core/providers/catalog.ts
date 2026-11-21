@@ -72,6 +72,8 @@ export const ProviderProfileSchema = z
     baseUrl: z.url(),
     keyUrl: z.url(),
     docsUrl: z.url(),
+    /** The provider's terms of service; required, shown next to "Get a key" (see TERMS.md). */
+    termsUrl: z.url(),
     keyPrefix: z.string().optional(),
     mayTrainOnData: z.boolean(),
     /** Who the limits apply to – drives the "extra keys don't add capacity" hint and quota sharing. */
