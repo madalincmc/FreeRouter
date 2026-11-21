@@ -106,13 +106,36 @@ Providers are **data, not code**. Each one is a profile in [`providers.json`](sr
 1. Download `FreeRouter-Setup-<version>.exe` from the [latest release](https://github.com/madalincmc/FreeRouter/releases/latest), or build it yourself (see [Build from source](#build-from-source)).
 2. Run it. The installer isn't code-signed yet, so Windows SmartScreen will ask you to confirm.
 
-FreeRouter updates itself. It checks GitHub Releases every 6 hours, downloads new versions in the background and
-installs them when you restart it (**Settings → Updates**, or the tray menu). You can turn this off in Settings.
-
 ### Add your free keys
+
+> [!IMPORTANT]
+> Before adding a key, read [**Terms of use & responsible use**](TERMS.md). In short:
+> - Every provider has its own terms. You're their customer, so read them.
+> - **Use keys from accounts with no billing attached.** For Gemini, Groq and NVIDIA, FreeRouter assumes your
+>   account is on the free tier. With billing enabled, the same requests can be charged.
+> - **Don't add a credit card just to unlock a "free" trial.** Many trials start charging when they end.
+> - Check each provider's usage dashboard now and then. Free tiers change without notice.
 
 Open **Providers & keys**, click **Get a key ↗** on each provider, paste the key and press **Add & test**.
 Every key is checked against the provider before it's saved. Two or three providers is plenty to start.
+
+### Updates
+
+FreeRouter updates itself from [GitHub Releases](https://github.com/madalincmc/FreeRouter/releases):
+
+- About a minute after it starts, and then every 6 hours, it checks for a new version and downloads it in the
+  background. Each download is verified against the SHA-512 published with the release.
+- When an update is ready, **Settings → Updates** and the tray menu offer **Restart & update**. If you don't
+  restart, the update installs the next time you quit FreeRouter.
+- You can turn automatic checks off in **Settings → Updates**, and use **Check now** whenever you like.
+  Development builds (`pnpm dev`) never update.
+
+To update by hand, download the latest installer and run it over your current install.
+
+Your keys, chats, settings and model registry live in `%APPDATA%\FreeRouter` and are kept across updates.
+Uninstalling also leaves that folder in place; delete it yourself to remove everything. Each new version
+upgrades the database on first start, so **going back to an older version isn't supported**: an older version
+may not understand the newer database.
 
 ### Connect a coding tool
 
@@ -169,6 +192,45 @@ pnpm package      # NSIS installer -> dist/FreeRouter-Setup-<version>.exe (~110 
 To try it end to end without any real keys: run `pnpm dev:fake`, then start the app with
 `FREEROUTER_DATA_DIR=<temp dir>` and `FREEROUTER_DEV_FAKE_PROVIDER=<printed URL>`.
 
+### Releasing a new version
+
+Releases are built and published by GitHub Actions ([`release.yml`](.github/workflows/release.yml)). Pushing a
+version tag starts it:
+
+```powershell
+# 1. Bump "version" in package.json (e.g. 0.1.0 -> 0.1.1), then:
+pnpm typecheck; pnpm test
+git commit -am "Release 0.1.1"
+git tag v0.1.1
+git push --follow-tags
+```
+
+The workflow then:
+
+1. checks that the tag matches the `version` in `package.json` (`v0.1.1` ↔ `0.1.1`) and stops if not;
+2. runs typecheck and the tests;
+3. builds the installer with `pnpm package`;
+4. creates the GitHub Release with `gh release create` and uploads three files:
+   - `FreeRouter-Setup-<version>.exe`, the installer;
+   - `FreeRouter-Setup-<version>.exe.blockmap`, so updates can download only the changed parts;
+   - `latest.yml`, the update feed. Installed copies read it to find the new version and its SHA-512.
+
+Installed copies pick the release up at their next check (within 6 hours, or straight away with **Check now**).
+
+A few rules keep this working:
+
+- **Releases must stay public.** The app reads the feed without a token, so a draft or private release is
+  invisible to it.
+- **Never edit or re-upload assets of a published release.** Installed copies verify the installer against the
+  SHA-512 in `latest.yml`. To fix a bad release, publish a new version.
+- **Don't reuse a version number.** electron-updater only installs versions higher than the running one.
+- **Schema changes need a new migration file.** Users update without exporting anything, and their database is
+  upgraded in place on first start.
+- If the workflow fails before *Publish release*, nothing was published. Fix the problem, then delete and
+  re-push the tag (`git push origin :refs/tags/v0.1.1`, then tag again).
+
+Releases are unsigned for now, so Windows SmartScreen warns on install. Automatic updates aren't affected.
+
 ### Architecture
 
 ```
@@ -184,11 +246,20 @@ tests/        Vitest suites, including a real HTTP fake provider for router scen
 `src/core` never imports Electron, and an architecture test enforces it. That keeps the router testable
 in plain Node, with scripted failures such as 429s, mid-stream breaks and slow first tokens.
 
+## Terms of use
+
+FreeRouter connects to third-party providers **with your own accounts and keys**, so their terms, pricing and
+privacy policies apply to everything you send. Please read [**Terms of use & responsible use**](TERMS.md). It
+covers:
+
+- each provider's terms, with links;
+- avoiding unexpected charges;
+- why not to add a credit card for "free" trials;
+- fair use of free tiers;
+- privacy and key safety.
+
+FreeRouter isn't affiliated with any of the providers above. It's provided as is, without warranty.
+
 ## License
 
 [MIT](LICENSE)
-
-## Disclaimer
-
-FreeRouter isn't affiliated with any of the providers above. Free tiers, limits and model line-ups change
-often, so please respect each provider's terms of service.
