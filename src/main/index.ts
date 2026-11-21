@@ -23,6 +23,8 @@ import { toGatewayView } from '@core/routing/log'
 import { GatewayController } from './gateway'
 import { AppSettingsStore } from '@core/settings'
 import { StickyStore } from '@core/routing/sticky'
+import { UpdateController } from '@core/updates/controller'
+import { createUpdater } from './updater'
 import { openDatabase, SettingsStore, type Db } from './db'
 import { safeStorageEncryptor } from './encryptor'
 import { devDataDir, ensureDevKey, withDevProvider } from './devHooks'
@@ -278,12 +280,30 @@ if (!app.requestSingleInstanceLock()) {
       return settings.set('ui.theme', theme)
     })
 
+    // ---- Auto-update: GitHub Releases via electron-updater, packaged builds only ----
+    const updates = new UpdateController({
+      currentVersion: app.getVersion(),
+      supported: app.isPackaged,
+      updater: createUpdater,
+      autoCheck: () => appSettings.get().autoUpdate,
+      onChange: (status) => {
+        tray?.refresh()
+        emit(mainWindow?.webContents, 'updates:status', status)
+      }
+    })
+    handle('updates:getStatus', isTrustedSender, () => updates.status())
+    handle('updates:check', isTrustedSender, () => updates.check())
+    handle('updates:install', isTrustedSender, () => updates.install())
+    updates.start()
+
     tray = new AppTray(join(resourcesDir, 'tray.png'), {
       open: showWindow,
       toggleGateway: () => void gateway.setEnabled(!gateway.status().enabled),
       quit: () => app.quit(),
       gatewayStatus: () => gateway.status(),
-      healthyModelCount: () => countRoutable(registry.list(), listProviders())
+      healthyModelCount: () => countRoutable(registry.list(), listProviders()),
+      updateStatus: () => updates.status(),
+      installUpdate: () => updates.install()
     })
 
     // Launched at login (--hidden) or "start minimised": live in the tray, gateway already up.

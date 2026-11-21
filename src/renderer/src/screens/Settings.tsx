@@ -1,9 +1,9 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, GripVertical, Plus, Trash2, X } from 'lucide-react'
-import type { AppSettings, ChainView, ModelOptions, RoutingSettings, ThemePreference } from '@shared/ipc'
+import type { AppSettings, ChainView, ModelOptions, RoutingSettings, ThemePreference, UpdateStatus } from '@shared/ipc'
 import { Badge, Button, Card, Page, Row, TextInput, Toggle } from '../components/ui'
-import { invoke, useIpcMutation, useIpcQuery } from '../lib/ipc'
+import { invoke, useIpcEvent, useIpcMutation, useIpcQuery } from '../lib/ipc'
 
 const THEMES: ThemePreference[] = ['dark', 'light', 'system']
 
@@ -75,6 +75,8 @@ export function SettingsScreen() {
             </Field>
           </Card>
         )}
+
+        {settings && <UpdatesCard autoUpdate={settings.autoUpdate} onToggle={(v) => update.mutate({ autoUpdate: v })} />}
 
         <Card title="Appearance">
           <div className="inline-flex rounded-md border border-border bg-panel-2 p-0.5" role="radiogroup">
@@ -337,6 +339,59 @@ function ChainEditor({
           ))}
       </select>
     </div>
+  )
+}
+
+function updateLine(s: UpdateStatus): { text: string; tone?: 'ok' | 'warn' | 'err' } {
+  switch (s.state) {
+    case 'disabled':
+      return { text: 'Updates are only available in the installed app.' }
+    case 'idle':
+      return { text: 'Not checked yet.' }
+    case 'checking':
+      return { text: 'Checking for updates…' }
+    case 'up-to-date':
+      return { text: `You’re on the latest version${s.checkedAt ? ` (checked ${new Date(s.checkedAt).toLocaleTimeString()})` : ''}.`, tone: 'ok' }
+    case 'downloading':
+      return { text: `Downloading v${s.availableVersion}… ${s.percent ?? 0}%` }
+    case 'ready':
+      return { text: `v${s.availableVersion} is ready. It installs when you restart or quit FreeRouter.`, tone: 'ok' }
+    case 'error':
+      return { text: `Update check failed: ${s.error ?? 'unknown error'}`, tone: 'err' }
+  }
+}
+
+function UpdatesCard({ autoUpdate, onToggle }: { autoUpdate: boolean; onToggle: (v: boolean) => void }) {
+  const qc = useQueryClient()
+  const { data: status } = useIpcQuery('updates:getStatus')
+  useIpcEvent(
+    'updates:status',
+    useCallback((s: UpdateStatus) => qc.setQueryData(['updates:getStatus'], s), [qc])
+  )
+  const check = useMutation({ mutationFn: () => invoke('updates:check'), onSuccess: (s) => qc.setQueryData(['updates:getStatus'], s) })
+  const install = useMutation({ mutationFn: () => invoke('updates:install') })
+  if (!status) return null
+  const line = updateLine(status)
+  const busy = status.state === 'checking' || status.state === 'downloading'
+
+  return (
+    <Card title="Updates">
+      <Field label="Check for updates automatically" hint="Looks for new releases on GitHub every 6 hours and downloads them in the background.">
+        <Toggle label="Automatic updates" checked={autoUpdate} onChange={onToggle} />
+      </Field>
+      <div className="flex items-center gap-3 pt-3">
+        <span className={`flex-1 text-sm ${line.tone === 'err' ? 'text-err' : line.tone === 'ok' ? '' : 'text-muted'}`}>{line.text}</span>
+        {status.state === 'ready' ? (
+          <Button variant="primary" disabled={install.isPending} onClick={() => install.mutate()}>
+            Restart & update
+          </Button>
+        ) : (
+          <Button disabled={status.state === 'disabled' || busy || check.isPending} onClick={() => check.mutate()}>
+            Check now
+          </Button>
+        )}
+      </div>
+    </Card>
   )
 }
 

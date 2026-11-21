@@ -24,6 +24,8 @@ win:
       arch: [x64]
   icon: resources/icon.png
 nsis:
+  # No spaces: GitHub rewrites spaces in asset names, which would break the URL in latest.yml.
+  artifactName: FreeRouter-Setup-${version}.${ext}
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
@@ -31,6 +33,14 @@ nsis:
   createStartMenuShortcut: true
   shortcutName: FreeRouter
   runAfterFinish: true
+# Auto-update feed. electron-builder writes app-update.yml into the app from this, and
+# `--publish always` uploads the installer, its .blockmap and latest.yml to a GitHub Release.
+# electron-updater needs the releases to be publicly readable (no token ships in the app).
+publish:
+  provider: github
+  owner: madalincmc
+  repo: FreeRouter
+  releaseType: release
 # better-sqlite3 ships N-API prebuilds that load in both Node and Electron; no rebuild needed
 # (and node-gyp source builds fail when the path contains a space).
 npmRebuild: false

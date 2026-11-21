@@ -1,5 +1,5 @@
-import { Menu, Tray, nativeImage } from 'electron'
-import type { GatewayStatus } from '@shared/ipc'
+import { Menu, Tray, nativeImage, type MenuItemConstructorOptions } from 'electron'
+import type { GatewayStatus, UpdateStatus } from '@shared/ipc'
 
 export interface TrayActions {
   open(): void
@@ -7,6 +7,8 @@ export interface TrayActions {
   quit(): void
   gatewayStatus(): GatewayStatus
   healthyModelCount(): number
+  updateStatus(): UpdateStatus
+  installUpdate(): void
 }
 
 export class AppTray {
@@ -24,8 +26,14 @@ export class AppTray {
 
   refresh(): void {
     const gw = this.actions.gatewayStatus()
+    const update = this.actions.updateStatus()
+    const updateItems: MenuItemConstructorOptions[] =
+      update.state === 'ready'
+        ? [{ label: `Restart to update to v${update.availableVersion}`, click: () => this.actions.installUpdate() }]
+        : []
     const menu = Menu.buildFromTemplate([
       { label: 'Open FreeRouter', click: () => this.actions.open() },
+      ...updateItems,
       { type: 'separator' },
       {
         label: `Gateway (127.0.0.1:${gw.port})`,

@@ -97,14 +97,18 @@ export const argSchemas: { [C in IpcChannel]: z.ZodType<IpcContract[C]['args']> 
         logRetentionDays: z.number().int().min(1).max(365).optional(),
         launchAtLogin: z.boolean().optional(),
         startMinimized: z.boolean().optional(),
-        gatewayAllowedOrigins: z.array(z.string().regex(/^https?:\/\/[^\s/]+$/)).max(20).optional()
+        gatewayAllowedOrigins: z.array(z.string().regex(/^https?:\/\/[^\s/]+$/)).max(20).optional(),
+        autoUpdate: z.boolean().optional()
       })
       .strict()
   ]),
   'settings:resetRouting': z.tuple([]),
   'chains:list': z.tuple([]),
   'chains:save': z.tuple([z.string().regex(/^[\w.-]{1,40}$/), z.array(modelId).max(20)]),
-  'chains:delete': z.tuple([z.string().max(40)])
+  'chains:delete': z.tuple([z.string().max(40)]),
+  'updates:getStatus': z.tuple([]),
+  'updates:check': z.tuple([]),
+  'updates:install': z.tuple([])
 }
 
 export function handle<C extends IpcChannel>(

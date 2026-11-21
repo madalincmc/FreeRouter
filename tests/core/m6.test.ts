@@ -92,7 +92,7 @@ describe('AppSettingsStore', () => {
     const s = new AppSettingsStore(backend()).get()
     expect(s.routing).toEqual(DEFAULT_ROUTING)
     expect(s.routing.weights).toEqual({ quality: 0.55, reliability: 0.2, speed: 0.15, headroom: 0.1 })
-    expect(s).toMatchObject({ privateMode: false, logRetentionDays: 7, launchAtLogin: false, startMinimized: false, gatewayAllowedOrigins: [] })
+    expect(s).toMatchObject({ privateMode: false, logRetentionDays: 7, launchAtLogin: false, startMinimized: false, gatewayAllowedOrigins: [], autoUpdate: true })
   })
 
   it('normalises weights, clamps maxPerProvider, and feeds the router config', () => {

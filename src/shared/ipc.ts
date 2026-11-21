@@ -38,6 +38,24 @@ export interface GatewayRequestView {
 
 export type ThemePreference = 'dark' | 'light' | 'system'
 
+/**
+ * Auto-update lifecycle. `disabled` means a dev or unpacked build that can't update;
+ * `ready` means an update was downloaded and installs on restart or quit.
+ */
+export type UpdateState = 'disabled' | 'idle' | 'checking' | 'up-to-date' | 'downloading' | 'ready' | 'error'
+
+export interface UpdateStatus {
+  state: UpdateState
+  currentVersion: string
+  /** The version being downloaded or ready to install. */
+  availableVersion: string | null
+  /** Download progress, 0–100. */
+  percent: number | null
+  checkedAt: number | null
+  /** Redacted, first line only. */
+  error: string | null
+}
+
 // ---- Providers & keys ----------------------------------------------------
 
 export interface Limits {
@@ -247,6 +265,8 @@ export interface AppSettings {
   startMinimized: boolean
   /** Browser origins allowed to call the gateway (empty = none). */
   gatewayAllowedOrigins: string[]
+  /** Check GitHub Releases for updates in the background (packaged builds only). */
+  autoUpdate: boolean
 }
 
 export interface ChainView {
@@ -308,6 +328,10 @@ export interface IpcContract {
   'chains:list': { args: []; result: ChainView[] }
   'chains:save': { args: [name: string, modelIds: string[]]; result: ChainView[] }
   'chains:delete': { args: [name: string]; result: ChainView[] }
+  'updates:getStatus': { args: []; result: UpdateStatus }
+  'updates:check': { args: []; result: UpdateStatus }
+  /** Quits and installs a downloaded update; false when none is ready. */
+  'updates:install': { args: []; result: boolean }
 }
 
 export type IpcChannel = keyof IpcContract
@@ -320,6 +344,7 @@ export interface IpcEvents {
   /** The registry changed (sync finished, model tested); the renderer refetches. */
   'models:changed': { reason: 'sync' | 'test' | 'edit' }
   'chat:event': ChatEvent
+  'updates:status': UpdateStatus
 }
 
 export type IpcEvent = keyof IpcEvents
@@ -370,7 +395,10 @@ export const IPC_CHANNELS: readonly IpcChannel[] = [
   'settings:resetRouting',
   'chains:list',
   'chains:save',
-  'chains:delete'
+  'chains:delete',
+  'updates:getStatus',
+  'updates:check',
+  'updates:install'
 ] as const
 
-export const IPC_EVENTS: readonly IpcEvent[] = ['gateway:statusChanged', 'gateway:request', 'models:changed', 'chat:event'] as const
+export const IPC_EVENTS: readonly IpcEvent[] = ['gateway:statusChanged', 'gateway:request', 'models:changed', 'chat:event', 'updates:status'] as const

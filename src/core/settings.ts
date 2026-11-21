@@ -24,7 +24,8 @@ const KEYS = {
   logRetentionDays: 'log.retentionDays',
   launchAtLogin: 'app.launchAtLogin',
   startMinimized: 'app.startMinimized',
-  gatewayAllowedOrigins: 'gateway.allowedOrigins'
+  gatewayAllowedOrigins: 'gateway.allowedOrigins',
+  autoUpdate: 'app.autoUpdate'
 } as const
 
 /** Normalises weights to sum to 1 (the UI edits them as relative values). */
@@ -47,7 +48,8 @@ export class AppSettingsStore {
       logRetentionDays: this.b.get(KEYS.logRetentionDays, 7),
       launchAtLogin: this.b.get(KEYS.launchAtLogin, false),
       startMinimized: this.b.get(KEYS.startMinimized, false),
-      gatewayAllowedOrigins: this.b.get<string[]>(KEYS.gatewayAllowedOrigins, [])
+      gatewayAllowedOrigins: this.b.get<string[]>(KEYS.gatewayAllowedOrigins, []),
+      autoUpdate: this.b.get(KEYS.autoUpdate, true)
     }
   }
 
@@ -60,7 +62,7 @@ export class AppSettingsStore {
       routing.maxPerProvider = Math.min(routing.maxPerProvider, routing.topN)
       this.b.set(KEYS.routing, routing)
     }
-    for (const k of ['privateMode', 'logRetentionDays', 'launchAtLogin', 'startMinimized', 'gatewayAllowedOrigins'] as const) {
+    for (const k of ['privateMode', 'logRetentionDays', 'launchAtLogin', 'startMinimized', 'gatewayAllowedOrigins', 'autoUpdate'] as const) {
       if (patch[k] !== undefined) this.b.set(KEYS[k], patch[k])
     }
     return this.get()

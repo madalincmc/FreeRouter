@@ -13,7 +13,7 @@ with a chat UI for you and an OpenAI-compatible gateway for your coding tools.
 ![Electron](https://img.shields.io/badge/Electron-45-47848F?logo=electron&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-200%20passing-22C55E)
+![Tests](https://img.shields.io/badge/tests-206%20passing-22C55E)
 ![Local first](https://img.shields.io/badge/keys-DPAPI%20encrypted-8B5CF6)
 ![License: MIT](https://img.shields.io/badge/license-MIT-yellow)
 
@@ -103,8 +103,11 @@ Providers are **data, not code**. Each one is a profile in [`providers.json`](sr
 
 ### Install
 
-1. Build the installer (see [Build from source](#build-from-source)), or grab one from Releases when it's published.
-2. Run `FreeRouter Setup <version>.exe`. The installer isn't code-signed yet, so Windows SmartScreen will ask you to confirm.
+1. Download `FreeRouter-Setup-<version>.exe` from the [latest release](https://github.com/madalincmc/FreeRouter/releases/latest), or build it yourself (see [Build from source](#build-from-source)).
+2. Run it. The installer isn't code-signed yet, so Windows SmartScreen will ask you to confirm.
+
+FreeRouter updates itself. It checks GitHub Releases every 6 hours, downloads new versions in the background and
+installs them when you restart it (**Settings → Updates**, or the tray menu). You can turn this off in Settings.
 
 ### Add your free keys
 
@@ -158,9 +161,9 @@ Requires Windows 10/11, **Node 22+** and **pnpm 10**.
 ```powershell
 pnpm install
 pnpm dev          # run with hot reload
-pnpm test         # 200 Vitest tests (no Electron needed)
+pnpm test         # 206 Vitest tests (no Electron needed)
 pnpm typecheck
-pnpm package      # NSIS installer -> dist/FreeRouter Setup <version>.exe (~110 MB)
+pnpm package      # NSIS installer -> dist/FreeRouter-Setup-<version>.exe (~110 MB)
 ```
 
 To try it end to end without any real keys: run `pnpm dev:fake`, then start the app with
